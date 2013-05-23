@@ -62,11 +62,13 @@ module Data.IntSet.Buddy.Internal
        ) where
 
 import Data.Bits
-import Data.Int
-import Data.Word
-import qualified Data.List as L
-import Data.Typeable
 import Data.Data
+import Data.Int
+import qualified Data.List as L
+import Data.Monoid
+import Data.Ord
+import Data.Word
+import Data.Typeable
 
 
 
@@ -133,7 +135,7 @@ data IntSet
   -- | Empty set. Contains nothing.
   | Nil
   deriving
-    (Show
+    ( Eq -- TODO is propositional equality really fit for equality?
 #if __GLASGOW_HASKELL__
     , Typeable, Data
 #endif
@@ -143,17 +145,32 @@ data IntSet
 -- nil, bin, fin propagation
 -- when fin is created?
 -- TODO implement debug invariants checkers
--- TODO instances for Show, Read, Eq, Ord, Monoid
 
--- | /O(1)/. The empty set.
-empty :: IntSet
-empty = Nil
-{-# INLINE empty #-}
+{--------------------------------------------------------------------
+  Instances
+--------------------------------------------------------------------}
 
--- | /O(1)/. A set containing one element.
-singleton :: Key -> IntSet
-singleton x = Tip (prefixOf x) (bitmapOf x)
-{-# INLINE singleton #-}
+instance Show IntSet where
+  showsPrec _ s = showString "fromList " . shows (toList s)
+
+instance Read IntSet where
+  readsPrec _ s = do
+    ("fromList", s') <- lex s
+    (xs, s'') <- reads s'
+    return (fromList xs, s'')
+
+instance Ord IntSet where
+  compare = comparing toList
+  -- TODO make it faster
+
+instance Monoid IntSet where
+  mempty  = empty
+  mappend = union
+  mconcat = unions
+
+{--------------------------------------------------------------------
+  Query
+--------------------------------------------------------------------}
 
 -- | /O(1)/. Is this the empty set?
 null :: IntSet -> Bool
@@ -188,6 +205,20 @@ member !x = go
 notMember :: Key -> IntSet -> Bool
 notMember !x = not . member x
 {-# INLINE notMember #-}
+
+{--------------------------------------------------------------------
+  Construction
+--------------------------------------------------------------------}
+
+-- | /O(1)/. The empty set.
+empty :: IntSet
+empty = Nil
+{-# INLINE empty #-}
+
+-- | /O(1)/. A set containing one element.
+singleton :: Key -> IntSet
+singleton x = Tip (prefixOf x) (bitmapOf x)
+{-# INLINE singleton #-}
 
 -- | /O(min(W, n)/ or /O(1)/. Add a value to the set.
 insert :: Key -> IntSet -> IntSet
