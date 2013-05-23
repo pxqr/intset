@@ -28,7 +28,9 @@
 --     * W - number bits in a 'Key'. This is 32 at 32 bit platforms
 --     and 64 at 64 bit platforms
 --
---
+--     * O(n) or O(k) means this operation have complexity O(n) in
+--     worst case (e.g. sparse set) or O(k) in best case (e.g. one
+--     single interval).
 --
 --   -- TODO Fin explanation
 --   -- TODO move to Internal.hs

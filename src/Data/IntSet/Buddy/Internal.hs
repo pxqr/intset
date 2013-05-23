@@ -103,21 +103,15 @@ singleton x = Tip (prefixOf x) (bitmapOf x)
 null :: IntSet -> Bool
 null = undefined
 
--- | Cardinality of a set.
---
---   Worst case /O(n)/
---   Best case /O(1)/
---
+-- | /O(n)/ or /O(1)/. Cardinality of a set.
 size :: IntSet -> Int
 size (Bin _  _  l r) = size l + size r
 size (Tip _  bm    ) = popCount bm
 size (Fin _  m     ) = m
 size  Nil            = 0
 
--- | Test if the value is element of the set.
---
---   Worst case: /O(min(W, n))/
---   Best case:  /O(1)/
+-- | /O(min(W, n))/ or /O(1)/.
+--   Test if the value is element of the set.
 --
 member :: Key -> IntSet -> Bool
 member !x = go
@@ -132,16 +126,14 @@ member !x = go
     go (Fin p  m)    = match x p m && m .&. x == m
     go  Nil          = False
 
--- | Test if the value is not an element of the set.
---
---   Worst case: /O(min(W, n))/
---   Best case:  /O(1)/
+-- | /O(min(W, n))/ or /O(1)/.
+--   Test if the value is not an element of the set.
 --
 notMember :: Key -> IntSet -> Bool
 notMember !x = not . member x
 {-# INLINE notMember #-}
 
--- | Add a value to the set.
+-- | /O(min(W, n)/ or /O(1)/. Add a value to the set.
 insert :: Key -> IntSet -> IntSet
 insert !x = insertBM (prefixOf x) (bitmapOf x)
 
@@ -166,6 +158,9 @@ insertBM !kx !bm = go
 {--------------------------------------------------------------------
   Combine
 --------------------------------------------------------------------}
+
+-- TODO complexity
+-- | The union of two sets.
 union :: IntSet -> IntSet -> IntSet
 union t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
     -- TODO make platform endian independent
@@ -196,12 +191,18 @@ union (Tip p bm) t = insertBM p bm t
 union (Fin p m)  t = undefined
 union  Nil t       = t
 
+-- TODO complexity
+-- | The union of list of sets.
 unions :: [IntSet] -> IntSet
 unions = L.foldl' union empty
 
 {--------------------------------------------------------------------
   Min/max
 --------------------------------------------------------------------}
+
+-- | /O(min(W, n))/ or /O(1)/. Find minimal element of the set.
+--   If set is empty then min is undefined.
+--
 findMin :: IntSet -> Key
 findMin (Bin _ rootM l r)
 -- TODO is it correct?
@@ -212,7 +213,6 @@ findMin (Bin _ rootM l r)
     go (Tip p bm)    = undefined
     go (Fin p _)     = p
     go  Nil          = error "findMax.go: Bin Nil invariant failed"
-
 findMin (Tip p bm) = p + findMinBM bm
 findMin (Fin p _)  = p
 findMin  Nil       = error "findMin: empty set"
@@ -223,6 +223,9 @@ findMinBM _ = error "findMinBM"
 {-# INLINE findMinBM #-}
 
 
+-- | /O(min(W, n))/ or /O(1)/. Find maximal element of the set.
+--  Is set is empty then max is undefined.
+--
 findMax :: IntSet -> Key
 findMax (Bin _ rootM l r)
     | rootM < 0 = go l
@@ -246,6 +249,9 @@ findMaxBM = error "findMaxBM"
    Map/fold/filter
 --------------------------------------------------------------------}
 -- TODO fusion
+-- | /O(n * min(W, n))/.
+--   Apply the function to each element of the set.
+--
 map :: (Key -> Key) -> IntSet -> IntSet
 map f = fromList . L.map f . toList
 {-# INLINE map #-}
@@ -253,6 +259,9 @@ map f = fromList . L.map f . toList
 listFin :: Prefix -> Mask -> [Key]
 listFin p m = [p..p + m - 1]
 
+-- | /O(n)/.  Fold the element using the given right associative
+--   binary operator.
+--
 foldr :: (Key -> a -> a) -> a -> IntSet -> a
 foldr f a = wrap
   where
@@ -266,6 +275,7 @@ foldr f a = wrap
     go z (Fin p m)     = L.foldr f z (listFin p m)
     go z  Nil          = z
 
+-- | /O(n)/. Filter all elements that satisfy the predicate.
 filter :: (Key -> Bool) -> IntSet -> IntSet
 filter f = go
   where
@@ -280,12 +290,18 @@ filter f = go
 {--------------------------------------------------------------------
   List conversions
 --------------------------------------------------------------------}
+
+-- | /O(n * min(W, n))/ or /O(n)/.
+--  Create a set from a list of its elements.
+--
 fromList :: [Key] -> IntSet
 fromList = L.foldl' (flip insert) empty
 
+-- | /O(n)/. Convert the set to a list of its elements.
 toList :: IntSet -> [Key]
 toList = Data.IntSet.Buddy.Internal.foldr (:) []
 
+-- | 'elems' is alias to 'toList' for compatibility.
 elems :: IntSet -> [Key]
 elems = toList
 {-# INLINE elems #-}
@@ -293,6 +309,7 @@ elems = toList
 {--------------------------------------------------------------------
   Smart constructors
 --------------------------------------------------------------------}
+
 tip :: Prefix -> BitMap -> IntSet
 tip _ 0  = Nil
 tip p bm = Tip p bm
