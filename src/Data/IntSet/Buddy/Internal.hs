@@ -1,4 +1,3 @@
--- TODO SEE IF RULE "TIP IS NEVER FULL" IS FASTER!
 -- |
 --   Copyright   :  (c) Sam T. 2013
 --   License     :  BSD3
@@ -59,10 +58,10 @@ module Data.IntSet.Buddy.Internal
 
          -- ** Debug
          -- *** Stats
-         -- TODO space savings
-         -- TODO ppStats
        , binCount, tipCount, finCount
        , wordCount
+       , savedSpace
+       , ppStats
 
          -- *** Invariants
        , isValid
@@ -136,6 +135,7 @@ data IntSet
 
   -- | Layout: Prefix up to /mask of bitmap size/, and mask specifing
   --   how large is set. There is no branching bit at all.
+  --   Tip is never full.
   --
   --   IntSet = Fin: contains all elements from prefix to
   --   (prefix - mask - 1)
@@ -159,8 +159,9 @@ data IntSet
 --   * Bin is never contain two Fins with masks equal to mask of Bin
 --   * Bin is never contain two full tips with masks equal to mask of the Bin
 --   * Mask becomes smaller at each child.
---   * Bin left subtree contains element each of which less than each element
+--   * Bin left subtree contains element each of which is less than each element
 --     of right subtree
+--   * Fin is never full
 --
 --  See 'binI' to find out when two intsets should be merged into one.
 --
@@ -465,7 +466,7 @@ join p1 t1 p2 t2
   Debug
 --------------------------------------------------------------------}
 binCount :: IntSet -> Int
-binCount (Bin _ _ l r) = binCount l + binCount r
+binCount (Bin _ _ l r) = 1 + binCount l + binCount r
 binCount _             = 0
 
 tipCount :: IntSet -> Int
@@ -483,6 +484,34 @@ wordCount (Bin _ _ l r) = 5 + wordCount l + wordCount r
 wordCount (Tip _ _)     = 3
 wordCount (Fin _ _)     = 3
 wordCount  Nil          = 1
+
+origSize :: IntSet -> Int
+origSize (Bin _ _ l r) = 5 + origSize l + origSize r
+origSize (Tip _ _)     = 3
+origSize (Fin _ m)     =
+  let tips = m `div` 64
+      bins = tips - 1
+  in tips * 3 + bins * 5
+origSize  Nil          = 1
+
+savedSpace :: IntSet -> Int
+savedSpace s = origSize s - wordCount s
+
+ppStats :: IntSet -> IO ()
+ppStats s = do
+  putStrLn $ "Bin count: " ++ show (binCount s)
+  putStrLn $ "Tip count: " ++ show (tipCount s)
+  putStrLn $ "Fin count: " ++ show (finCount s)
+
+  let treeSize = wordCount s
+  putStrLn $ "Size in bytes: " ++ show (treeSize * 8)
+
+  let savedSize = savedSpace s
+  putStrLn $ "Saved space:   " ++ show (savedSize * 8)
+
+  let orig = origSize s
+  let per = (fromIntegral savedSize / fromIntegral orig) * (100 :: Double)
+  putStrLn $ "Percent saved: " ++ show per ++ "%"
 
 showTree :: IntSet -> IO ()
 showTree = putStrLn . go 0
