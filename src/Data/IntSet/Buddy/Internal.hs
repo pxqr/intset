@@ -95,7 +95,7 @@ empty = Nil
 {-# INLINE empty #-}
 
 -- | /O(1)/. A set containing one element.
-singleton :: Int -> IntSet
+singleton :: Key -> IntSet
 singleton x = Tip (prefixOf x) (bitmapOf x)
 {-# INLINE singleton #-}
 
@@ -119,7 +119,7 @@ size  Nil            = 0
 --   Worst case: /O(min(W, n))/
 --   Best case:  /O(1)/
 --
-member :: Int -> IntSet -> Bool
+member :: Key -> IntSet -> Bool
 member !x = go
   where
     go (Bin p m l r)
@@ -137,7 +137,7 @@ member !x = go
 --   Worst case: /O(min(W, n))/
 --   Best case:  /O(1)/
 --
-notMember :: Int -> IntSet -> Bool
+notMember :: Key -> IntSet -> Bool
 notMember !x = not . member x
 {-# INLINE notMember #-}
 
@@ -202,7 +202,7 @@ unions = L.foldl' union empty
 {--------------------------------------------------------------------
   Min/max
 --------------------------------------------------------------------}
-findMin :: IntSet -> Int
+findMin :: IntSet -> Key
 findMin (Bin _ rootM l r)
 -- TODO is it correct?
     | rootM < 0 = go r
@@ -223,7 +223,7 @@ findMinBM _ = error "findMinBM"
 {-# INLINE findMinBM #-}
 
 
-findMax :: IntSet -> Int
+findMax :: IntSet -> Key
 findMax (Bin _ rootM l r)
     | rootM < 0 = go l
     | otherwise = go r
@@ -245,13 +245,15 @@ findMaxBM = error "findMaxBM"
 {--------------------------------------------------------------------
    Map/fold/filter
 --------------------------------------------------------------------}
-map :: (Int -> Int) -> IntSet -> IntSet
+-- TODO fusion
+map :: (Key -> Key) -> IntSet -> IntSet
 map f = fromList . L.map f . toList
+{-# INLINE map #-}
 
 listFin :: Prefix -> Mask -> [Key]
 listFin p m = [p..p + m - 1]
 
-foldr :: (Int -> a -> a) -> a -> IntSet -> a
+foldr :: (Key -> a -> a) -> a -> IntSet -> a
 foldr f a = wrap
   where
     wrap (Bin _ m l r)
@@ -278,13 +280,13 @@ filter f = go
 {--------------------------------------------------------------------
   List conversions
 --------------------------------------------------------------------}
-fromList :: [Int] -> IntSet
+fromList :: [Key] -> IntSet
 fromList = L.foldl' (flip insert) empty
 
-toList :: IntSet -> [Int]
+toList :: IntSet -> [Key]
 toList = Data.IntSet.Buddy.Internal.foldr (:) []
 
-elems :: IntSet -> [Int]
+elems :: IntSet -> [Key]
 elems = toList
 {-# INLINE elems #-}
 
