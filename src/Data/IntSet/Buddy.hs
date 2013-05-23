@@ -35,6 +35,7 @@
 --   -- TODO Fin explanation
 --   -- TODO move to Internal.hs
 --
+{-# LANGUAGE CPP #-}
 module Data.IntSet.Buddy
        (
          -- * Types
@@ -62,6 +63,11 @@ module Data.IntSet.Buddy
          -- ** Lists
        , elems
        , toList, fromList
+
+#if defined (TESTING)
+         -- * Debug
+       , isValid
+#endif
        ) where
 
 import Data.IntSet.Buddy.Internal as SB

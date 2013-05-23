@@ -38,6 +38,9 @@ prop_sort xs' = toList (fromList xs) == L.nub (L.sort xs)
   where
     xs = L.map abs xs'
 
+prop_valid :: IntSet -> Bool
+prop_valid = isValid
+
 main :: IO ()
 main = defaultMain
   [ testProperty "empty"        prop_empty
@@ -45,4 +48,5 @@ main = defaultMain
   , testProperty "insertLookup" prop_insertLookup
   , testProperty "unionLookup"  prop_unionLookup
   , testProperty "sort"         prop_sort
+  , testProperty "valid"        prop_valid
   ]

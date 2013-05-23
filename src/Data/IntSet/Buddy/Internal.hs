@@ -1,3 +1,4 @@
+-- TODO SEE IF RULE "TIP IS NEVER FULL" IS FASTER!
 -- |
 --   Copyright   :  (c) Sam T. 2013
 --   License     :  BSD3
@@ -57,8 +58,14 @@ module Data.IntSet.Buddy.Internal
        , tip
 
          -- ** Debug
+         -- *** Stats
+         -- TODO space savings
+         -- TODO ppStats
        , binCount, tipCount, finCount
        , wordCount
+
+         -- *** Invariants
+       , isValid
        ) where
 
 import Data.Bits
@@ -141,10 +148,28 @@ data IntSet
 #endif
     )
 
--- TODO document invariants
--- nil, bin, fin propagation
--- when fin is created?
--- TODO implement debug invariants checkers
+{--------------------------------------------------------------------
+  Invariants
+--------------------------------------------------------------------}
+-- |
+--   * Nil is never child of Bin
+--   * Bin is never contain two Fins with masks equal to mask of Bin
+--   * Bin is never contain two full tips with masks equal to mask of the Bin
+--   * Mask becomes smaller at each child.
+--   * Bin left subtree contains element each of which less than each element
+--     of right subtree
+--
+--  See 'binI' to find out when two intsets should be merged into one.
+--
+-- TODO check 2,3,4 invariants
+--
+isValid :: IntSet -> Bool
+isValid  Nil      = True
+isValid (Tip _ _) = True
+isValid (Fin _ _) = True
+isValid (Bin _  _ Nil _  ) = error "Bin _ _ Nil _"
+isValid (Bin _  _ _   Nil) = error "Bin _ _ _   Nil"
+isValid (Bin _  _  l r) = isValid l && isValid r
 
 {--------------------------------------------------------------------
   Instances
@@ -406,7 +431,9 @@ tip p bm = Tip p bm
 -- and see if this gives some boost
 --
 -- used when we insert in left or right subtree tree
+
 binI :: Prefix -> Mask -> IntSet -> IntSet -> IntSet
+-- TODO convert full Tip to Fin, then we can avoid this pattern matching
 binI _ _ (Tip p1 bm1) (Tip p2 bm2)
   | isFull bm1 && isFull bm2 && xor p1 p2 == 64
   = Fin p1 128
