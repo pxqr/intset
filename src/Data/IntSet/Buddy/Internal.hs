@@ -34,6 +34,7 @@ module Data.IntSet.Buddy.Internal
        , empty
        , singleton
        , insert
+       , delete
 
          -- * Map/Fold/Filter
        , Data.IntSet.Buddy.Internal.map
@@ -54,7 +55,7 @@ module Data.IntSet.Buddy.Internal
        , Prefix, Mask, BitMap
 
          -- ** Smart constructors
-       , tip
+       , tip, tipI, tipD
 
          -- ** Debug
          -- *** Stats
@@ -68,6 +69,7 @@ module Data.IntSet.Buddy.Internal
 
          -- *** Visualization
        , showTree, showRaw
+       , putTree, putRaw
        ) where
 
 import Data.Bits
@@ -265,25 +267,57 @@ insertBM !kx !bm = go
       | kx' == kx = tipI kx (bm .|. bm')
       | otherwise = join kx (Tip kx bm) kx' t
 
-    go t@(Fin   p m  )
+    go t@(Fin   p m  ) -- TODO check if div not optimized
       | nomatch kx p (m `div` 2) = join kx (Tip kx bm) p t
       |    otherwise         = t
 
     go    Nil          = Tip kx bm
+
+
+-- | /O(min(n, W))/. Delete a value from the set.
+delete :: Key -> IntSet -> IntSet
+delete !x = deleteBM (prefixOf x) (bitmapOf x)
+
+deleteBM :: Prefix -> BitMap -> IntSet -> IntSet
+deleteBM !kx !bm = go
+  where
+    go t@(Bin p m l r)
+      | nomatch kx p m = t
+      |    zero kx m   = binD p m (deleteBM kx bm l) r
+      |    otherwise   = binD p m l (deleteBM kx bm r)
+
+    go t@(Tip kx' bm')
+      | kx == kx'  = tipD kx (bm' .&. complement bm)
+      | otherwise  = join kx (Tip kx bm) kx' t
+
+    go t@(Fin p m) -- TODO check if div not optimized
+      | nomatch kx p (m `div` 2) = t
+      |       otherwise          = deleteBM kx bm (splitFin p m)
+
+    go    Nil      = Nil
+
+splitFin :: Prefix -> Mask -> IntSet
+splitFin p m
+  -- WARN here we have inconsistency - bitmap is full
+  -- but this will be fixed in next go for any kx bm
+  -- and this faster (I think)
+  |  m == 64  = Tip p (complement 0)
+  | otherwise = Bin p m' (Fin p m') (Fin (p + m') m')
+  where
+    m' = m `div` 2
 
 {--------------------------------------------------------------------
   Combine
 --------------------------------------------------------------------}
 
 -- TODO complexity
--- | The union of two sets.
+-- | /O(n + m)/ or /O(1)/. The union of two sets.
 union :: IntSet -> IntSet -> IntSet
 union t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
-    -- TODO make platform endian independent
-    | m1  > m2  = leftiest
-    | m1  < m2  = rightiest
-    | p1 == p2  = binI p1 m1 (union l1 l2) (union r1 r2)
-    | otherwise = join p1 t1 p2 t2
+    | shorter m1 m2 = leftiest
+    | shorter m1 m2 = rightiest
+    | p1 == p2      = binI p1 m1 (union l1 l2) (union r1 r2)
+    | otherwise     = join p1 t1 p2 t2
   where
     leftiest
       | nomatch p2 p1 m1 = join p1 t1 p2 t2
@@ -295,19 +329,34 @@ union t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
       |    zero p1 m2    = binI p2 m2 (union t1 l2) r2
       |     otherwise    = binI p2 m2 l2 (union t1 r2)
 
-union t @(Bin _ _ _ _)      (Tip p bm) = insertBM p bm t
-union t1@(Bin p1 m1 _ _) t2@(Fin p2 m2)
-  | m1 < m2 && mask m2 p1 == mask m2 p2 = Fin p2 m2
-  | otherwise = join p1 t1 p2 t2
-
+union t@(Bin _ _ _ _) (Tip p bm) = insertBM  p bm t
+union t@(Bin _ _ _ _) (Fin p m ) = insertFin p m  t
 union t@(Bin _ _ _ _)  Nil       = t
+union   (Fin p m )     t         = insertFin p m t
+union   (Tip p bm)     t         = insertBM p bm t
+union    Nil           t         = t
 
-union (Tip p bm) t = insertBM p bm t
--- TODO implement this case
-union (Fin p m)  t = undefined
-union  Nil t       = t
+-- O(1)
+insertFin :: Prefix -> Mask -> IntSet -> IntSet
+insertFin p2 m2  t1@(Bin p1 m1 _ _)
+    | shorter m2 m1 && mask m2 p1 == mask m2 p2 = t2
+    | otherwise = join p1 t1 p2 t2
+  where
+    t2 = (Fin p2 m2)
+insertFin p1 m1 (Tip p bm) = insertBM p bm (Fin p1 m1)
+insertFin p1 m1 t2@(Fin p2 m2 )
+    | isBuddy p1 m1 p2 m2  = joinBuddy p1 m1 p2 m2
+    | subsetOf p1 m1 p2 m2 = t2
+    | subsetOf p2 m2 p1 m1 = t1
+    |      otherwise       = join p1 t1 p2 t2
+  where
+    t1 = Fin p1 m1
+    isBuddy _ _ _ _ = undefined
+    joinBuddy _ _ _ _ = undefined
+    subsetOf _ _ _ _ = undefined
 
--- TODO complexity
+insertFin p m Nil = Fin p m
+
 -- | The union of list of sets.
 unions :: [IntSet] -> IntSet
 unions = L.foldl' union empty
@@ -425,19 +474,28 @@ elems = toList
 {--------------------------------------------------------------------
   Smart constructors
 --------------------------------------------------------------------}
--- used when we insert to tip
+-- used when we insert to the tip
 tipI :: Prefix -> BitMap -> IntSet
 tipI p bm
   | isFull bm = Fin p 64
   | otherwise = Tip p bm
 {-# INLINE tipI #-}
 
+-- used when we delete from the tip
+tipD :: Prefix -> BitMap -> IntSet
+tipD _ 0  = Nil
+tipD p bm = Tip p bm
+{-# INLINE tipD #-}
+
+-- used when we construct from unknown mask
 tip :: Prefix -> BitMap -> IntSet
-tip _ 0  = Nil
-tip p bm = Tip p bm
+tip p bm
+  |  bm == 0  = Nil
+  | isFull bm = Fin p 64
+  | otherwise = Tip p bm
 {-# INLINE tip #-}
 
--- used when we insert in left or right subtree tree
+-- used when we insert in left or right subtree
 binI :: Prefix -> Mask -> IntSet -> IntSet -> IntSet
 -- DONE convert full Tip to Fin, then we can avoid this pattern matching
 --binI _ _ (Tip p1 bm1) (Tip p2 bm2)
@@ -450,6 +508,14 @@ binI p m (Fin _  m1) (Fin _  m2)
   = Fin p (m * 2)
 
 binI p m l r = Bin p m l r
+
+-- used when we delete from left or right subtree
+binD :: Prefix -> Mask -> IntSet -> IntSet -> IntSet
+binD _ _ Nil r   = r
+binD _ _ l   Nil = l
+binD p m l   r  = Bin p m l r
+{-# INLINE binD #-}
+
 
 -- note that join should not merge buddies
 join :: Prefix -> IntSet -> Prefix -> IntSet -> IntSet
@@ -513,8 +579,8 @@ ppStats s = do
   let per = (fromIntegral savedSize / fromIntegral orig) * (100 :: Double)
   putStrLn $ "Percent saved: " ++ show per ++ "%"
 
-showTree :: IntSet -> IO ()
-showTree = putStrLn . go 0
+showTree :: IntSet -> String
+showTree = go 0
   where
     indent n = replicate (4 * n) ' '
     go n  Nil          = indent n ++ "{}"
@@ -526,8 +592,8 @@ showTree = putStrLn . go 0
       , go (succ n) r
       ]
 
-showRaw :: IntSet -> IO ()
-showRaw = putStrLn . go 0
+showRaw :: IntSet -> String
+showRaw = go 0
   where
     indent n = replicate (4 * n) ' '
     go n  Nil          = indent n ++ "Nil"
@@ -538,6 +604,12 @@ showRaw = putStrLn . go 0
       , indent n, "+", show p, " ", show m, "\n"
       , go (succ n) r
       ]
+
+putTree :: IntSet -> IO ()
+putTree = putStrLn . showTree
+
+putRaw :: IntSet -> IO ()
+putRaw = putStrLn . showRaw
 
 {--------------------------------------------------------------------
   Misc
