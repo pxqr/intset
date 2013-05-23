@@ -43,15 +43,9 @@ source-repository head
 library
   exposed-modules:     Data.IntSet.Buddy
                      , Data.IntSet.Buddy.ByteString
-
   other-modules:       Data.IntSet.Buddy.Internal
-
-  build-depends:       base ==4.*
-                     , bits-extras >= 0.1.1
+  build-depends:       base == 4.*
                      , bytestring
-                     , process, temporary, vacuum-graphviz
-                     , containers >= 0.5.2
-
   hs-source-dirs:      src
   ghc-options:         -Wall
 
@@ -60,11 +54,14 @@ test-suite properties
   type:                exitcode-stdio-1.0
   main-is:             Main.hs
   hs-source-dirs:      tests
-  build-depends:       base       == 4.*
+  build-depends:       base == 4.*
+
                      , test-framework
                      , test-framework-quickcheck2
                      , QuickCheck
+
                      , intset
+
   ghc-options:         -Wall
 
 
