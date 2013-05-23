@@ -1,6 +1,3 @@
--- TODO document space complexity
--- TODO use key type
-
 -- |
 --   Copyright   :  (c) Sam T. 2013
 --   License     :  BSD3
@@ -53,6 +50,10 @@ module Data.IntSet.Buddy.Internal
 
          -- do not export this in Data.IntSet.Buddy
          -- * Internal
+         -- ** Types
+       , Prefix, Mask, BitMap
+
+         -- ** Smart constructors
        , tip
 
          -- ** Debug
@@ -68,26 +69,81 @@ import Data.Typeable
 import Data.Data
 
 
+
+-- | Prefix is used to distinguish subtrees by its prefix bits.  When
+--   new prefix is created its non prefix bits are zeroed.  Prefix is
+--   big endian. This means that we throw away only least significant
+--   bits
 type Prefix = Int
+
+-- | Mask is used to specify mask for branching bit.
+--   For exsample if we have mask 0000100 that means:
+--
+--     * We do not consider last three bits in prefix.
+--
+--     * Branching bit is at position 3 starting from least
+--     significant bit.
+--
+--     * Prefix mask is 4 bits. (at left of the bitstring)
+--
 type Mask   = Int
+
+-- | Bitmap is used to make intset dense. To achive this we throw away
+-- last bits 6 or 7 bits from any(!) prefix and thus any(!) mask
+-- should be more than 64 or 32. Bitmap by itself contain flags which
+-- indicates "is an element present in a set?" by marking suffices
+-- indices. For exsample bitmap 01001010 contain elements 2, 5 and 7.
+--
+--   One bitmap might contain up to 64 or 32 (depending on arch)
+-- elements.
+--
 type BitMap = Word
 
 -- | Type of IntSet elements.
 type Key    = Int
 
--- TODO document each constructor
--- | Integer set.
-data IntSet = Bin {-# UNPACK #-} !Prefix {-# UNPACK #-} !Mask   !IntSet !IntSet
-            | Tip {-# UNPACK #-} !Prefix {-# UNPACK #-} !BitMap
-            | Fin {-# UNPACK #-} !Prefix {-# UNPACK #-} !Mask
-            | Nil
-              deriving (Show
-#if __GLASGOW_HASKELL__
-                       , Typeable, Data
-#endif
-                       )
--- TODO document invariants
 
+-- | Integer set.
+data IntSet
+  -- | Layout: prefix up to branching bit, mask for branching bit,
+  --   left subtree and right subtree.
+  --
+  --   IntSet = Bin: contains elements of left and right subtrees thus
+  --   just merge to subtrees.  All elements of left subtree is less
+  --   that from right subtree. Except non-negative numbers, they are
+  --   in left subtree of root bin, if any.
+  --
+  = Bin {-# UNPACK #-} !Prefix {-# UNPACK #-} !Mask   !IntSet !IntSet
+
+  -- | Layout: Prefix up to /mask of bitmap size/, and bitmap
+  --   containing elements starting /from the prefix/.
+  --
+  --   IntSet = Tip: contains elements
+  --
+  | Tip {-# UNPACK #-} !Prefix {-# UNPACK #-} !BitMap
+
+  -- | Layout: Prefix up to /mask of bitmap size/, and mask specifing
+  --   how large is set. There is no branching bit at all.
+  --
+  --   IntSet = Fin: contains all elements from prefix to
+  --   (prefix - mask - 1)
+  --
+  | Fin {-# UNPACK #-} !Prefix {-# UNPACK #-} !Mask
+
+  -- | Empty set. Contains nothing.
+  | Nil
+  deriving
+    (Show
+#if __GLASGOW_HASKELL__
+    , Typeable, Data
+#endif
+    )
+
+-- TODO document invariants
+-- nil, bin, fin propagation
+-- when fin is created?
+-- TODO implement debug invariants checkers
+-- TODO instances for Show, Read, Eq, Ord, Monoid
 
 -- | /O(1)/. The empty set.
 empty :: IntSet
@@ -440,12 +496,18 @@ highestBitMask x1 =
       x4 = x3 .|. x3 `shiftR` 4
       x5 = x4 .|. x4 `shiftR` 8
       x6 = x5 .|. x5 `shiftR` 16
--- #if !(defined(__GLASGOW_HASKELL__) && WORD_SIZE_IN_BITS==32)
+{-
+ #if !(defined(__GLASGOW_HASKELL__) && WORD_SIZE_IN_BITS==32)
+-}
       x7 = x6 .|. x6 `shiftR` 32
   in x7 `xor` (x7 `shiftR` 1)
--- #else
+{-
+ #else
+-}
 --in x6 `xor` (x6 `shiftRL` 1)
--- #endif
+{-
+  #endif
+-}
 {-# INLINE highestBitMask #-}
 
 {--------------------------------------------------------------------
