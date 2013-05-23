@@ -66,6 +66,9 @@ module Data.IntSet.Buddy.Internal
 
          -- *** Invariants
        , isValid
+
+         -- *** Visualization
+       , showTree, showRaw
        ) where
 
 import Data.Bits
@@ -258,7 +261,7 @@ insertBM !kx !bm = go
       |    otherwise   = binI p m l (insertBM kx bm r)
 
     go t@(Tip kx' bm')
-      | kx' == kx = Tip kx (bm .|. bm')
+      | kx' == kx = tipI kx (bm .|. bm')
       | otherwise = join kx (Tip kx bm) kx' t
 
     go t@(Fin   p m  )
@@ -421,30 +424,33 @@ elems = toList
 {--------------------------------------------------------------------
   Smart constructors
 --------------------------------------------------------------------}
+-- used when we insert to tip
+tipI :: Prefix -> BitMap -> IntSet
+tipI p bm
+  | isFull bm = Fin p 64
+  | otherwise = Tip p bm
+{-# INLINE tipI #-}
 
 tip :: Prefix -> BitMap -> IntSet
 tip _ 0  = Nil
 tip p bm = Tip p bm
 {-# INLINE tip #-}
 
--- TODO make binIL, binIR for left and right subtrees exclusively;
--- and see if this gives some boost
---
 -- used when we insert in left or right subtree tree
-
 binI :: Prefix -> Mask -> IntSet -> IntSet -> IntSet
--- TODO convert full Tip to Fin, then we can avoid this pattern matching
-binI _ _ (Tip p1 bm1) (Tip p2 bm2)
-  | isFull bm1 && isFull bm2 && xor p1 p2 == 64
-  = Fin p1 128
+-- DONE convert full Tip to Fin, then we can avoid this pattern matching
+--binI _ _ (Tip p1 bm1) (Tip p2 bm2)
+--  | isFull bm1 && isFull bm2 && xor p1 p2 == 64
+--  = Fin p1 128
 
 binI p m (Fin _  m1) (Fin _  m2)
   | m1 == m && m2 == m
+-- TODO ?  | m1 == m2
   = Fin p (m * 2)
 
 binI p m l r = Bin p m l r
 
-
+-- note that join should not merge buddies
 join :: Prefix -> IntSet -> Prefix -> IntSet -> IntSet
 join p1 t1 p2 t2
     | zero p1 m = Bin p m t1 t2
@@ -478,6 +484,32 @@ wordCount (Tip _ _)     = 3
 wordCount (Fin _ _)     = 3
 wordCount  Nil          = 1
 
+showTree :: IntSet -> IO ()
+showTree = putStrLn . go 0
+  where
+    indent n = replicate (4 * n) ' '
+    go n  Nil          = indent n ++ "{}"
+    go n (Fin p m)     = indent n ++ show p ++ ".." ++ show (p + m - 1)
+    go n (Tip p bm)    = indent n ++ show p ++ " " ++ show bm
+    go n (Bin p m l r) = concat
+      [ go (succ n) l, "\n"
+      , indent n, "+", show p, " ", show m, "\n"
+      , go (succ n) r
+      ]
+
+showRaw :: IntSet -> IO ()
+showRaw = putStrLn . go 0
+  where
+    indent n = replicate (4 * n) ' '
+    go n  Nil          = indent n ++ "Nil"
+    go n (Fin p m)     = indent n ++ show p ++ " " ++ show m
+    go n (Tip p bm)    = indent n ++ show p ++ " " ++ show bm
+    go n (Bin p m l r) = concat
+      [ go (succ n) l, "\n"
+      , indent n, "+", show p, " ", show m, "\n"
+      , go (succ n) r
+      ]
+
 {--------------------------------------------------------------------
   Misc
 --------------------------------------------------------------------}
@@ -496,7 +528,7 @@ foldrBits p f acc bm = go 0
   #-}
 
 isFull :: BitMap -> Bool
-isFull x = complement 0 .&. x == complement 0
+isFull x = x == complement 0
 {-# INLINE isFull #-}
 
 
