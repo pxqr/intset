@@ -57,6 +57,9 @@ prop_unionLeftId a = mempty <> a == a
 prop_unionRightId :: IntSet -> Bool
 prop_unionRightId a = mempty <> a == a
 
+prop_unionIdemp :: IntSet -> Bool
+prop_unionIdemp a = a <> a == a
+
 prop_showRead :: IntSet -> Bool
 prop_showRead a = read (show a) == a
 
@@ -67,6 +70,17 @@ prop_eq a b
   where
     a' = nub (sort a)
     b' = nub (sort b)
+
+prop_eqRefl :: IntSet -> Bool
+prop_eqRefl a = a == a
+
+prop_eqSym :: IntSet -> IntSet -> Bool
+prop_eqSym a b = (a == b) == (b == a)
+
+prop_eqTrans :: IntSet -> IntSet -> IntSet -> Bool
+prop_eqTrans a b c
+  | (a == b) && (b == c) = a == c
+  |    otherwise         = True
 
 prop_size :: [Int] -> Bool
 prop_size xs = length (nub (sort xs)) == size (fromList xs)
@@ -92,7 +106,7 @@ prop_filtering xs = S.filter even (fromList xs) == fromList (L.filter even xs)
 prop_min :: [Int] -> Bool
 prop_min [] = True
 prop_min xs = findMin (fromList xs) == L.minimum xs
-
+-- union, intersection idempotency
 main :: IO ()
 main = defaultMain
   [ testProperty "empty"                prop_empty
@@ -105,7 +119,11 @@ main = defaultMain
   , testProperty "valid"                prop_valid
 
   , testProperty "read . show == id"    prop_showRead
-  , testProperty "equality"             prop_eq
+
+  , testProperty "equality"              prop_eq
+  , testProperty "equality reflexivity"  prop_eqRefl
+  , testProperty "equality symmetry"     prop_eqSym
+  , testProperty "equality transitivity" prop_eqTrans
 
   , testProperty "map preserve size"    prop_mapPresSize
   , testProperty "map not preserve siz" prop_mapLessSize
@@ -119,6 +137,7 @@ main = defaultMain
   , testProperty "union associative"    prop_unionAssoc
   , testProperty "union left identity"  prop_unionLeftId
   , testProperty "union right identity" prop_unionRightId
+  , testProperty "union idemp"          prop_unionIdemp
 
   , testProperty "min"                  prop_min
   ]
