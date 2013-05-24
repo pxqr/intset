@@ -223,13 +223,18 @@ instance Num IntSet where
   signum = error "IntSet.singum: not implemented"
   fromInteger = singleton . fromIntegral
 
+instance Bounded IntSet where
+  minBound = empty
+  maxBound = universe
+
 {--------------------------------------------------------------------
   Query
 --------------------------------------------------------------------}
 
 -- | /O(1)/. Is this the empty set?
 null :: IntSet -> Bool
-null = undefined
+null Nil = True
+null _   = False
 
 -- | /O(n)/ or /O(1)/. Cardinality of a set.
 size :: IntSet -> Int
