@@ -7,7 +7,7 @@ import Test.Framework
 import Test.Framework.Providers.QuickCheck2
 
 import Data.List as L (sort, nub, map)
-import Data.IntSet.Buddy
+import Data.IntSet.Buddy as S
 import Data.Monoid
 
 
@@ -74,13 +74,23 @@ prop_size xs = length (nub (sort xs)) == size (fromList xs)
 prop_insertDelete :: Int -> IntSet -> Bool
 prop_insertDelete i = notMember i . delete i . insert i
 
+prop_mapPresSize :: IntSet -> Bool
+prop_mapPresSize s = size (S.map (*2) s) == size s
+
+prop_mapLessSize :: IntSet -> Bool
+prop_mapLessSize s = size (S.map (`div` 2) s) <= size s
+
+prop_mapping :: [Int] -> Bool
+prop_mapping xs = toList (S.map (*2) (fromList xs)) == L.map (*2) (nub (sort xs))
+
+
 main :: IO ()
 main = defaultMain
   [ testProperty "empty"                prop_empty
   , testProperty "singleton"            prop_singleton
   , testProperty "insertLookup"         prop_insertLookup
   , testProperty "insert delete"        prop_insertDelete
-  , testProperty "unionLookup"          prop_unionLookup
+
   , testProperty "size"                 prop_size
   , testProperty "sort"                 prop_sort
   , testProperty "valid"                prop_valid
@@ -88,6 +98,11 @@ main = defaultMain
   , testProperty "read . show == id"    prop_showRead
   , testProperty "equality"             prop_eq
 
+  , testProperty "map preserve size"    prop_mapPresSize
+  , testProperty "map not preserve siz" prop_mapLessSize
+  , testProperty "mapping"              prop_mapping
+
+  , testProperty "unionLookup"          prop_unionLookup
   , testProperty "union commutative"    prop_unionComm
   , testProperty "union associative"    prop_unionAssoc
   , testProperty "union left identity"  prop_unionLeftId
