@@ -197,13 +197,18 @@ isValid (Bin _  _  l r) = isValid l && isValid r
 --------------------------------------------------------------------}
 
 instance Show IntSet where
-  showsPrec _ s = showString "fromList " . shows (toList s)
+  showsPrec _ s = showString "{" . list (toList s) . showString "}"
+    where
+      list [] = showString ""
+      list [x] = shows x
+      list (x : xs) = shows x . showString "," . list xs
 
 instance Read IntSet where
   readsPrec _ s = do
-    ("fromList", s') <- lex s
+    ("{ ", s') <- lex s
     (xs, s'') <- reads s'
-    return (fromList xs, s'')
+    ("} ", s''') <- lex s''
+    return (fromList xs, s''')
 
 instance Ord IntSet where
   compare = comparing toList
