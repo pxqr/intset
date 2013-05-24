@@ -57,6 +57,9 @@ module Data.IntSet.Buddy
        , SB.foldr
        , SB.filter
 
+         -- * Min/Max
+       , findMin, findMax
+
          -- * Combine
        , union, unions
 

@@ -6,7 +6,7 @@ import Test.QuickCheck hiding ((.&.))
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2
 
-import Data.List as L (sort, nub, map, filter)
+import Data.List as L (sort, nub, map, filter, minimum, maximum)
 import Data.IntSet.Buddy as S
 import Data.Monoid
 
@@ -89,6 +89,9 @@ prop_filterSize s = size (S.filter even s) <= size s
 prop_filtering :: [Int] -> Bool
 prop_filtering xs = S.filter even (fromList xs) == fromList (L.filter even xs)
 
+prop_min :: [Int] -> Bool
+prop_min [] = True
+prop_min xs = findMin (fromList xs) == L.minimum xs
 
 main :: IO ()
 main = defaultMain
@@ -116,4 +119,6 @@ main = defaultMain
   , testProperty "union associative"    prop_unionAssoc
   , testProperty "union left identity"  prop_unionLeftId
   , testProperty "union right identity" prop_unionRightId
+
+  , testProperty "min"                  prop_min
   ]

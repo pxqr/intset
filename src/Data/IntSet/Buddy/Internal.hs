@@ -17,7 +17,8 @@
 {-# LANGUAGE BangPatterns #-}
 
 #if __GLASGOW_HASKELL__ >= 702
-{-# LANGUAGE Safe #-}
+-- TODO fix this
+-- {-# LANGUAGE Safe #-}
 #endif
 
 module Data.IntSet.Buddy.Internal
@@ -40,6 +41,9 @@ module Data.IntSet.Buddy.Internal
        , Data.IntSet.Buddy.Internal.map
        , Data.IntSet.Buddy.Internal.foldr
        , Data.IntSet.Buddy.Internal.filter
+
+         -- * Min/Max
+       , findMin, findMax
 
          -- * Combine
        , union, unions
@@ -76,6 +80,7 @@ module Data.IntSet.Buddy.Internal
        ) where
 
 import Data.Bits
+import Data.Bits.Extras
 import Data.Data
 import Data.Int
 import qualified Data.List as L
@@ -379,17 +384,17 @@ findMin (Bin _ rootM l r)
     | rootM < 0 = go r
     | otherwise = go l
   where
-    go (Bin _ m l r) = go l
-    go (Tip p bm)    = undefined
-    go (Fin p _)     = p
-    go  Nil          = error "findMax.go: Bin Nil invariant failed"
+    go (Bin _ _ lb _) = go lb
+    go (Tip p bm)     = p + findMinBM bm
+    go (Fin p _)      = p
+    go  Nil           = error "findMax.go: Bin Nil invariant failed"
+
 findMin (Tip p bm) = p + findMinBM bm
 findMin (Fin p _)  = p
 findMin  Nil       = error "findMin: empty set"
 
--- TODO implement findMinBM
 findMinBM :: BitMap -> Int
-findMinBM _ = error "findMinBM"
+findMinBM = fromIntegral . trailingZeros
 {-# INLINE findMinBM #-}
 
 
@@ -412,7 +417,7 @@ findMax  Nil       = error "findMax: empty set"
 
 -- TODO implement findMaxBM
 findMaxBM :: BitMap -> Int
-findMaxBM = error "findMaxBM"
+findMaxBM = fromIntegral . leadingZeros
 {-# INLINE findMaxBM #-}
 
 {--------------------------------------------------------------------
@@ -449,12 +454,9 @@ foldr f a = wrap
 filter :: (Key -> Bool) -> IntSet -> IntSet
 filter f = go
   where
-    -- we use Bin instead of bin because
-    go (Bin p m l r) = Bin m p (go l) (go r)
-    -- FIX fromDistinctAscList
-    go (Tip p bm) = undefined
-    go (Fin p m)  = fromList $ L.filter f $ listFin p m
-                    --fromList (L.filter f (listBuddies m p))
+    go (Bin p m l r) = binD m p (go l) (go r)
+    go (Tip p bm) = fromList $ L.filter f $ toList (Tip p bm) -- FIX use foldrBits
+    go (Fin p m)  = fromList $ L.filter f $ listFin p m -- FIX fromDistinctAscList
     go  Nil       = Nil
 
 {--------------------------------------------------------------------
