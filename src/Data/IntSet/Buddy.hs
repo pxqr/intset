@@ -50,6 +50,7 @@ module Data.IntSet.Buddy
        , empty
        , singleton
        , insert
+       , delete
 
          -- * Map/Fold/Filter
        , SB.map
