@@ -6,7 +6,7 @@ import Test.QuickCheck hiding ((.&.))
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2
 
-import Data.List as L (sort, nub, map, filter, minimum, maximum)
+import Data.List as L (sort, nub, map, filter, minimum, maximum, intersect)
 import Data.IntSet.Buddy as S
 import Data.Monoid
 
@@ -57,8 +57,37 @@ prop_unionLeftId a = mempty <> a == a
 prop_unionRightId :: IntSet -> Bool
 prop_unionRightId a = mempty <> a == a
 
-prop_unionIdemp :: IntSet -> Bool
-prop_unionIdemp a = a <> a == a
+prop_unionTop :: IntSet -> Bool
+prop_unionTop a = a <> a == a
+
+prop_unionIdemp :: IntSet -> IntSet -> Bool
+prop_unionIdemp a b = ((a <> b) <> b) == a
+
+prop_intersection :: [Int] -> [Int] -> Bool
+prop_intersection a b =
+  toList (intersection (fromList a) (fromList b))
+  == L.intersect a b
+
+prop_intersectComm :: IntSet -> IntSet -> Bool
+prop_intersectComm a b = (a `intersection` b) == (b `intersection` a)
+
+prop_intersectAssoc :: IntSet -> IntSet -> IntSet -> Bool
+prop_intersectAssoc a b c =
+  ((a `intersection` b) `intersection` c)
+  ==  (a `intersection` (b `intersection` c))
+
+prop_intersectLeft :: IntSet -> Bool
+prop_intersectLeft a = intersection empty a == empty
+
+prop_intersectRight :: IntSet -> Bool
+prop_intersectRight a = intersection a empty == empty
+
+prop_intersectBot :: IntSet -> Bool
+prop_intersectBot a = (a `intersection` a) == a
+
+prop_intersectIdemp :: IntSet -> IntSet -> Bool
+prop_intersectIdemp a b = ((a `intersection` b) `intersection` b)
+                          == intersection a b
 
 prop_showRead :: IntSet -> Bool
 prop_showRead a = read (show a) == a
@@ -106,7 +135,10 @@ prop_filtering xs = S.filter even (fromList xs) == fromList (L.filter even xs)
 prop_min :: [Int] -> Bool
 prop_min [] = True
 prop_min xs = findMin (fromList xs) == L.minimum xs
--- union, intersection idempotency
+
+-- TODO tests specialized for Fin
+-- TODO tests for universy
+
 main :: IO ()
 main = defaultMain
   [ testProperty "empty"                prop_empty
@@ -137,7 +169,15 @@ main = defaultMain
   , testProperty "union associative"    prop_unionAssoc
   , testProperty "union left identity"  prop_unionLeftId
   , testProperty "union right identity" prop_unionRightId
+  , testProperty "union top"            prop_unionTop
   , testProperty "union idemp"          prop_unionIdemp
+
+  , testProperty "intersection lists"        prop_intersection
+  , testProperty "intersection commutative"  prop_intersectComm
+  , testProperty "intersection associative"  prop_intersectAssoc
+  , testProperty "intersection left empty"   prop_intersectLeft
+  , testProperty "intersection right empty"  prop_intersectRight
+  , testProperty "intersection bot"          prop_intersectBot
 
   , testProperty "min"                  prop_min
   ]

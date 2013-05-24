@@ -62,6 +62,7 @@ module Data.IntSet.Buddy
 
          -- * Combine
        , union, unions
+       , intersection, intersections
 
          -- * Conversion
          -- ** Lists

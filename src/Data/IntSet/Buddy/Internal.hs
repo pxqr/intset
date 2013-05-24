@@ -47,6 +47,7 @@ module Data.IntSet.Buddy.Internal
 
          -- * Combine
        , union, unions
+       , intersection, intersections
 
          -- * Conversion
          -- ** Lists
@@ -318,6 +319,10 @@ splitFin p m
   Combine
 --------------------------------------------------------------------}
 
+{--------------------------------------------------------------------
+  Union
+--------------------------------------------------------------------}
+
 -- TODO complexity
 -- | /O(n + m)/ or /O(1)/. The union of two sets.
 union :: IntSet -> IntSet -> IntSet
@@ -363,13 +368,80 @@ insertFin p1 m1 (Fin p2 m2 )
     |      otherwise       = join p1 (Fin p1 m1) p2 (Fin p2 m2)
   where
     isBuddy p1 m1 p2 m2 = m1 == m2 && p1 + m1 == p2
-    subsetOf p1 m1 p2 m2 = (m2 `shorter` m1) && match p1 p2 m2
 
 insertFin p m Nil = Fin p m
 
 -- | The union of list of sets.
 unions :: [IntSet] -> IntSet
 unions = L.foldl' union empty
+
+-- used to if one Fin is subset of the another Fin
+subsetOf :: Prefix -> Mask -> Prefix -> Mask -> Bool
+subsetOf p1 m1 p2 m2 = (m2 `shorter` m1) && match p1 p2 m2
+
+{--------------------------------------------------------------------
+  Intersection
+--------------------------------------------------------------------}
+
+-- | /O(n + m)/ or /O(1)/. The intersection of two sets.
+intersection :: IntSet -> IntSet -> IntSet
+intersection t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
+    | m1 `shorter` m2 = leftiest
+    | m2 `shorter` m1 = rightiest
+    |     p1 == p2    = binD p1 m1 (intersection l1 l2) (intersection r1 r2)
+    |     otherwise   = undefined
+  where
+    leftiest
+      | nomatch p2 p1 m1 = Nil
+      |     zero p2 m1   = intersection l1 t2
+      |     otherwise    = intersection r1 t2
+
+    rightiest
+      | nomatch p1 p2 m2 = Nil
+      |     zero p2 m1   = intersection t1 l1
+      |     otherwise    = intersection t1 r1
+
+intersection t@(Bin _ _ _ _)   (Tip p bm)    = intersectBM p bm t
+intersection t@(Bin _ _ _ _)   (Fin p m)     = intersectFin p m t
+intersection   (Bin _ _ _ _)    Nil          = Nil
+intersection   (Tip p bm)       t            = intersectBM p bm t
+intersection   (Fin p m)        t            = intersectFin p m t
+intersection    Nil             _            = Nil
+
+
+intersectFin :: Prefix -> Mask -> IntSet -> IntSet
+intersectFin p1 m1 (Bin p2 m2 l r) = undefined
+--  | nomatch
+intersectFin p1 m1 (Tip p2 bm2)
+  | match p2 p1 m1 = Tip p2 bm2
+  |    otherwise   = Nil
+
+intersectFin p1 m1 (Fin p2 m2)
+  | undefined = Fin p2 m2
+  | otherwise = Nil
+
+intersectFin _ _    Nil          = Nil
+
+
+intersectBM :: Prefix -> BitMap -> IntSet -> IntSet
+intersectBM p1 bm1 (Bin p2 m2 l r)
+  | nomatch p1 p2 m2 = Nil
+  |     zero p1 m2   = intersectBM p1 bm1 l
+  |      otherwise   = intersectBM p1 bm1 r
+
+intersectBM p1 bm1 (Tip p2 bm2 )
+  | p1 == p2  = tipD p1 (bm1 .&. bm2)
+  | otherwise = Nil
+
+intersectBM p1 bm1 (Fin p2 m2)
+  | match p1 p2 m2 = Tip p1 bm1
+  |    otherwise   = Nil
+
+intersectBM _  _    Nil        = Nil
+
+
+intersections :: [IntSet] -> IntSet
+intersections = L.foldl' intersection empty
 
 {--------------------------------------------------------------------
   Min/max
@@ -417,7 +489,7 @@ findMax  Nil       = error "findMax: empty set"
 
 -- TODO implement findMaxBM
 findMaxBM :: BitMap -> Int
-findMaxBM = fromIntegral . leadingZeros
+findMaxBM = error "findMaxBM"  --fromIntegral . leadingZeros
 {-# INLINE findMaxBM #-}
 
 {--------------------------------------------------------------------
