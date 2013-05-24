@@ -49,6 +49,11 @@ module Data.IntSet.Buddy
          -- * Construction
        , empty
        , singleton
+
+       , naturals
+       , negatives
+       , universe
+
        , insert
        , delete
 

@@ -34,6 +34,11 @@ module Data.IntSet.Buddy.Internal
          -- * Construction
        , empty
        , singleton
+
+       , naturals
+       , negatives
+       , universe
+
        , insert
        , delete
 
@@ -89,7 +94,7 @@ import Data.Monoid
 import Data.Ord
 import Data.Word
 import Data.Typeable
-
+import Debug.Trace
 
 
 -- | Prefix is used to distinguish subtrees by its prefix bits.  When
@@ -109,6 +114,7 @@ type Prefix = Int
 --     * Prefix mask is 4 bits. (at left of the bitstring)
 --
 type Mask   = Int
+-- TODO Mask = Word?
 
 -- | Bitmap is used to make intset dense. To achive this we throw away
 -- last bits 6 or 7 bits from any(!) prefix and thus any(!) mask
@@ -260,6 +266,21 @@ singleton :: Key -> IntSet
 singleton x = Tip (prefixOf x) (bitmapOf x)
 {-# INLINE singleton #-}
 
+-- | /O(1)/. The set containing all natural numbers.
+naturals :: IntSet
+naturals = Fin 0 (bit 63)
+{-# INLINE naturals #-}
+
+-- | /O(1)/. The set containing all negative numbers.
+negatives :: IntSet
+negatives = Fin (bit 63) (bit 63)
+{-# INLINE negatives #-}
+
+-- | /O(1)/. The set containing the all integers it might contain.
+universe :: IntSet
+universe = Fin (bit 63) 0
+{-# INLINE universe #-}
+
 -- | /O(min(W, n)/ or /O(1)/. Add a value to the set.
 insert :: Key -> IntSet -> IntSet
 insert !x = insertBM (prefixOf x) (bitmapOf x)
@@ -311,9 +332,9 @@ splitFin p m
   -- but this will be fixed in next go for any kx bm
   -- and this faster (I think)
   |  m == 64  = Tip p (complement 0)
-  | otherwise = Bin p m' (Fin p m') (Fin (p + m') m')
+   | otherwise = Bin p m' (Fin p m') (Fin (p + m') m')
   where
-    m' = m `div` 2
+    m' = intFromNat ((natFromInt m) `shiftR` 1) -- TODO endian independent
 
 {--------------------------------------------------------------------
   Combine
