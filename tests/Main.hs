@@ -6,7 +6,7 @@ import Test.QuickCheck hiding ((.&.))
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2
 
-import Data.List as L (sort, nub, map)
+import Data.List as L (sort, nub, map, filter)
 import Data.IntSet.Buddy as S
 import Data.Monoid
 
@@ -83,6 +83,12 @@ prop_mapLessSize s = size (S.map (`div` 2) s) <= size s
 prop_mapping :: [Int] -> Bool
 prop_mapping xs = toList (S.map (*2) (fromList xs)) == L.map (*2) (nub (sort xs))
 
+prop_filterSize :: IntSet -> Bool
+prop_filterSize s = size (S.filter even s) <= size s
+
+prop_filtering :: [Int] -> Bool
+prop_filtering xs = S.filter even (fromList xs) == fromList (L.filter even xs)
+
 
 main :: IO ()
 main = defaultMain
@@ -101,6 +107,9 @@ main = defaultMain
   , testProperty "map preserve size"    prop_mapPresSize
   , testProperty "map not preserve siz" prop_mapLessSize
   , testProperty "mapping"              prop_mapping
+
+  , testProperty "filter size"          prop_filterSize
+  , testProperty "filtering"            prop_filtering
 
   , testProperty "unionLookup"          prop_unionLookup
   , testProperty "union commutative"    prop_unionComm
