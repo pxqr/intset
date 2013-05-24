@@ -15,6 +15,7 @@ module Data.IntSet.Buddy.ByteString
          fromByteString, toByteString
        ) where
 
+import Data.Bits
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Internal as BS
@@ -32,20 +33,38 @@ fromByteString bs =
     let (fptr, off, len) = BS.toForeignPtr bs in
     BS.inlinePerformIO $ withForeignPtr fptr $ \_ptr -> do
       let ptr = _ptr `advancePtr` off
-      goFrom (castPtr ptr) len
+      let !s = goFrom (castPtr ptr) len
+      return $! s
   where
-    goFrom ptr len = go 0 empty
+    goFrom ptr len =
+--      go 0 empty
+        goTree 0 len
       where
         -- TODO go treelike
-        go x !acc
-          |  x < len  = do
-            bm <- peekByteOff ptr x
-            let wordSize = sizeOf (0 :: Word)
-                -- TODO use tip instead of tipI in insertBM
-                -- e.g. insertBMMany
-            let s = insertBM (x * wordSize) bm acc
+        wordSize = sizeOf (0 :: Word)
+
+        go :: Int -> IntSet -> IntSet
+        go !x !acc
+          |  x + wordSize <= len  = do
+            let bm = BS.inlinePerformIO (peekByteOff ptr x)
+            let !s = unionBM (x * 8) bm acc
             go (x + wordSize) s
-          | otherwise = return acc
+          | otherwise = goBytes x acc
+
+        goTree :: Int -> Int -> IntSet
+        goTree !l !r
+          | r - l <= wordSize =
+            let bm = BS.inlinePerformIO (peekByteOff ptr l)
+            in tip (l * wordSize) bm
+          | otherwise =
+            let !mid = l + ((r - l) `shiftR` 1)
+                !px  = l `shiftL` 3
+                !msk = branchMask px (mid `shiftL` 3)
+            in bin  px msk (goTree l mid) $! (goTree mid r)
+
+        goBytes :: Int -> IntSet -> IntSet
+        goBytes !x !s | x == len = s
+        goBytes  _  _ = error "not implemented"
 
 toBuilder :: IntSet -> Builder
 toBuilder = snd . go 0

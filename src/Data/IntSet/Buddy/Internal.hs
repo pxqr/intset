@@ -65,11 +65,12 @@ module Data.IntSet.Buddy.Internal
        , Prefix, Mask, BitMap
 
          -- ** Smart constructors
-       , tip, tipI, tipD
+       , tip, tipI, tipD, bin
        , insertBM
+       , unionBM
 
          -- ** Debug
-       , shorter, prefixOf, bitmapOf
+       , shorter, prefixOf, bitmapOf, branchMask
 
          -- *** Stats
        , binCount, tipCount, finCount
@@ -314,8 +315,8 @@ insertBM !kx !bm = go
       | otherwise = join kx (Tip kx bm) kx' t
 
     go t@(Fin   p m  ) -- TODO check if div not optimized
-      | nomatch kx p (m `div` 2) = join kx (Tip kx bm) p t
-      |    otherwise         = t
+      | nomatch kx p (finMask m) = join kx (Tip kx bm) p t
+      |        otherwise          = t
 
     go    Nil          = Tip kx bm
 
@@ -337,7 +338,7 @@ deleteBM !kx !bm = go
       | otherwise  = join kx (Tip kx bm) kx' t
 
     go t@(Fin p m) -- TODO check if div not optimized
-      | nomatch kx p (m `div` 2) = t
+      | nomatch kx p (finMask m) = t
       |       otherwise          = deleteBM kx bm (splitFin p m)
 
     go    Nil      = Nil
@@ -425,7 +426,15 @@ isBuddy p1 m1 p2 m2 = m1 == m2 && p1 + m1 == p2
 -- used to if one Fin is subset of the another Fin
 subsetOf :: Prefix -> Mask -> Prefix -> Mask -> Bool
 subsetOf p1 m1 p2 m2 = (m2 `shorter` m1) && match p1 p2 m2
+                       && (m2 .&. p1 == m2 .&. p2)
 {-# INLINE subsetOf #-}
+
+unionBM :: Prefix -> BitMap -> IntSet -> IntSet
+unionBM p bm t = case tip p bm of
+  Bin _ _ _ _ -> error "unionBM: impossible"
+  Fin p' m'   -> insertFin p' m' t
+  Tip p' bm'  -> insertBM p' bm' t
+  Nil         -> t
 
 {--------------------------------------------------------------------
   Intersection
@@ -650,6 +659,17 @@ binD _ _ l   Nil = l
 binD p m l   r  = Bin p m l r
 {-# INLINE binD #-}
 
+-- used when we don't know kind of transformation
+bin :: Prefix -> Mask -> IntSet -> IntSet -> IntSet
+bin _ _ Nil r   = r
+bin _ _ l   Nil = l
+bin p m (Fin _  m1) (Fin _  m2)
+  | m1 == m && m2 == m
+-- TODO ?  | m1 == m2
+  = Fin p (m * 2)
+bin p m l   r  = Bin p m l r
+{-# INLINE bin #-}
+
 
 -- note that join should not merge buddies
 join :: Prefix -> IntSet -> Prefix -> IntSet -> IntSet
@@ -748,7 +768,6 @@ putRaw = putStrLn . showRaw
 {--------------------------------------------------------------------
   Misc
 --------------------------------------------------------------------}
--- TODO specialize for internal use cases
 foldrBits :: Int -> (Int -> a -> a) -> a -> BitMap -> a
 foldrBits p f acc bm = go 0
   where
@@ -837,6 +856,10 @@ highestBitMask x1 =
 maskW :: Nat -> Nat -> Prefix
 maskW i m = intFromNat (i .&. (Bits.complement (m-1) `xor` m))
 {-# INLINE maskW #-}
+
+finMask :: Mask -> Mask
+finMask m = m `shiftR` 1
+{-# INLINE finMask #-}
 
 
 {----------------------------------------------------------------------

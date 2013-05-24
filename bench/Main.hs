@@ -47,16 +47,16 @@ main = defaultMain
     bench "toList/50000" $ nf SB.toList s
 
   , let !bs = B.replicate 10000 255 in
-    bench "fromByteString/10000/O" $ nf Main.fromByteString bs
+    bench "fromByteString/10000-O" $ whnf Main.fromByteString bs
 
-  , let !bs = B.replicate 800000 255 in
-    bench "fromByteString/800000/S/255" $ nf SB.fromByteString bs
+  , let !bs = B.replicate 1048576 255 in
+    bench "fromByteString/8M-S-dense" $ whnf SB.fromByteString bs
 
-  , let !bs = B.replicate 800000 85 in
-    bench "fromByteString/800000/S/85" $ nf SB.fromByteString bs
+--  , let !bs = B.replicate 1048576 85 in
+--    bench "fromByteString/8M-S-sparse" $ whnf SB.fromByteString bs
 
-  , let !bs = B.replicate 800000 0 in
-    bench "fromByteString/800000/S/0" $ nf SB.fromByteString bs
+  , let !bs = B.replicate 1048576 0 in
+    bench "fromByteString/8M-S-empty" $ whnf SB.fromByteString bs
 
   , let !s = S.fromList [0..1000000] in
     bench "member/1000000" $ nf (L.all (`S.member` s)) [50000..100000]
