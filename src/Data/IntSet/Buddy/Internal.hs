@@ -85,7 +85,7 @@ module Data.IntSet.Buddy.Internal
        , putTree, putRaw
        ) where
 
-import Data.Bits
+import Data.Bits as Bits
 import Data.Bits.Extras
 import Data.Data
 import Data.Int
@@ -214,6 +214,15 @@ instance Monoid IntSet where
   mappend = union
   mconcat = unions
 
+instance Num IntSet where
+  (+) = union
+  (*) = intersection
+  (-) = difference
+  negate = Data.IntSet.Buddy.Internal.complement
+  abs = error "IntSet.abs: not implemented"
+  signum = error "IntSet.singum: not implemented"
+  fromInteger = singleton . fromIntegral
+
 {--------------------------------------------------------------------
   Query
 --------------------------------------------------------------------}
@@ -317,7 +326,7 @@ deleteBM !kx !bm = go
       |    otherwise   = binD p m l (deleteBM kx bm r)
 
     go t@(Tip kx' bm')
-      | kx == kx'  = tipD kx (bm' .&. complement bm)
+      | kx == kx'  = tipD kx (bm' .&. Bits.complement bm)
       | otherwise  = join kx (Tip kx bm) kx' t
 
     go t@(Fin p m) -- TODO check if div not optimized
@@ -331,10 +340,14 @@ splitFin p m
   -- WARN here we have inconsistency - bitmap is full
   -- but this will be fixed in next go for any kx bm
   -- and this faster (I think)
-  |  m == 64  = Tip p (complement 0)
+  |  m == 64  = Tip p (Bits.complement 0)
    | otherwise = Bin p m' (Fin p m') (Fin (p + m') m')
   where
     m' = intFromNat ((natFromInt m) `shiftR` 1) -- TODO endian independent
+
+
+complement :: IntSet -> IntSet
+complement = undefined
 
 {--------------------------------------------------------------------
   Combine
@@ -463,6 +476,13 @@ intersectBM _  _    Nil        = Nil
 
 intersections :: [IntSet] -> IntSet
 intersections = L.foldl' intersection empty
+
+{--------------------------------------------------------------------
+  Difference
+--------------------------------------------------------------------}
+
+difference :: IntSet -> IntSet -> IntSet
+difference = error "difference: not implemented"
 
 {--------------------------------------------------------------------
   Min/max
@@ -729,7 +749,7 @@ foldrBits p f acc bm = go 0
   #-}
 
 isFull :: BitMap -> Bool
-isFull x = x == complement 0
+isFull x = x == Bits.complement 0
 {-# INLINE isFull #-}
 
 
@@ -805,7 +825,7 @@ highestBitMask x1 =
   Big endian operations
 --------------------------------------------------------------------}
 maskW :: Nat -> Nat -> Prefix
-maskW i m = intFromNat (i .&. (complement (m-1) `xor` m))
+maskW i m = intFromNat (i .&. (Bits.complement (m-1) `xor` m))
 {-# INLINE maskW #-}
 
 
@@ -818,7 +838,7 @@ suffixBitMask = bitSize (undefined :: Word) - 1
 {-# INLINE suffixBitMask #-}
 
 prefixBitMask :: Int
-prefixBitMask = complement suffixBitMask
+prefixBitMask = Bits.complement suffixBitMask
 {-# INLINE prefixBitMask #-}
 
 prefixOf :: Int -> Prefix
