@@ -23,7 +23,7 @@
 module Data.IntSet.Buddy.Internal
        (
          -- * Types
-         IntSet, Key
+         IntSet(..), Key
 
          -- * Query
        , Data.IntSet.Buddy.Internal.null
@@ -56,6 +56,7 @@ module Data.IntSet.Buddy.Internal
 
          -- ** Smart constructors
        , tip, tipI, tipD
+       , insertBM
 
          -- ** Debug
          -- *** Stats
@@ -338,11 +339,11 @@ union    Nil           t         = t
 
 -- O(1)
 insertFin :: Prefix -> Mask -> IntSet -> IntSet
-insertFin p2 m2  t1@(Bin p1 m1 _ _)
-    | shorter m2 m1 && mask m2 p1 == mask m2 p2 = t2
-    | otherwise = join p1 t1 p2 t2
-  where
-    t2 = (Fin p2 m2)
+insertFin p1 m1  t2@(Bin p2 m2 _ _)
+    | shorter m2 m1 && mask m2 p1 == mask m2 p2
+    = Fin p1 m1
+    | otherwise = join p1 (Fin p1 m1) p2 t2
+
 insertFin p1 m1 (Tip p bm) = insertBM p bm (Fin p1 m1)
 insertFin p1 m1 t2@(Fin p2 m2 )
     | isBuddy p1 m1 p2 m2  = joinBuddy p1 m1 p2 m2

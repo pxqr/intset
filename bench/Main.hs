@@ -37,7 +37,7 @@ main = defaultMain
   , bench "fromList/S-5000"  $ nf SB.fromList [0..5000]
   , bench "fromList/S-10000" $ nf SB.fromList [0..10000]
   , bench "fromList/S-20000" $ nf SB.fromList [0..20000]
-  , bench "fromList/S-20000" $ nf SB.fromList (L.map (* 10) [0..20000])
+  , bench "fromList/S-20000-sparse" $ nf SB.fromList (L.map (* 10) [0..20000])
 
 
   , let !s = S.fromList [1..50000] in
@@ -47,19 +47,22 @@ main = defaultMain
     bench "toList/50000" $ nf SB.toList s
 
   , let !bs = B.replicate 10000 255 in
-    bench "fromByteString/80000/O" $ nf Main.fromByteString bs
+    bench "fromByteString/10000/O" $ nf Main.fromByteString bs
 
-  , let !bs = B.replicate 10000 255 in
-    bench "fromByteString/80000/S/255" $ nf SB.fromByteString bs
+  , let !bs = B.replicate 800000 255 in
+    bench "fromByteString/800000/S/255" $ nf SB.fromByteString bs
 
-  , let !bs = B.replicate 10000 85 in
-    bench "fromByteString/80000/S/85" $ nf SB.fromByteString bs
+  , let !bs = B.replicate 800000 85 in
+    bench "fromByteString/800000/S/85" $ nf SB.fromByteString bs
+
+  , let !bs = B.replicate 800000 0 in
+    bench "fromByteString/800000/S/0" $ nf SB.fromByteString bs
 
   , let !s = S.fromList [0..1000000] in
-    bench "member/1000000" $ nf (L.all (`S.member` s)) [50000..10000]
+    bench "member/1000000" $ nf (L.all (`S.member` s)) [50000..100000]
 
   , let !s = SB.fromList [0..1000000] in
-    bench "member/1000000" $ nf (L.all (`SB.member` s)) [50000..10000]
+    bench "member/1000000" $ nf (L.all (`SB.member` s)) [50000..100000]
 
 --  , bench "distinct/100000/O" $ nf S.fromDistinctAscList  [1..100000]
 --  , bench "distinct/20000/S"  $ nf SB.fromDistinctAscList [1..20000]

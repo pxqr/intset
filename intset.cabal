@@ -45,7 +45,7 @@ library
                      , Data.IntSet.Buddy.ByteString
   other-modules:       Data.IntSet.Buddy.Internal
   build-depends:       base == 4.*
-                     , bytestring
+                     , bytestring >= 0.10.2
   hs-source-dirs:      src
   ghc-options:         -Wall -DTESTING
 
