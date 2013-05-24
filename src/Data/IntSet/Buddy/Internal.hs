@@ -59,6 +59,8 @@ module Data.IntSet.Buddy.Internal
        , insertBM
 
          -- ** Debug
+       , shorter, prefixOf, bitmapOf
+
          -- *** Stats
        , binCount, tipCount, finCount
        , wordCount
@@ -316,7 +318,7 @@ splitFin p m
 union :: IntSet -> IntSet -> IntSet
 union t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
     | shorter m1 m2 = leftiest
-    | shorter m1 m2 = rightiest
+    | shorter m2 m1 = rightiest
     | p1 == p2      = binI p1 m1 (union l1 l2) (union r1 r2)
     | otherwise     = join p1 t1 p2 t2
   where
@@ -326,7 +328,7 @@ union t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
       |      otherwise   = binI p1 m1 l1 (union r1 t2)
 
     rightiest
-      | nomatch p2 p1 m1 = join p1 t1 p2 t2
+      | nomatch p1 p2 m2 = join p1 t1 p2 t2
       |    zero p1 m2    = binI p2 m2 (union t1 l2) r2
       |     otherwise    = binI p2 m2 l2 (union t1 r2)
 
@@ -337,24 +339,26 @@ union   (Fin p m )     t         = insertFin p m t
 union   (Tip p bm)     t         = insertBM p bm t
 union    Nil           t         = t
 
--- O(1)
+
 insertFin :: Prefix -> Mask -> IntSet -> IntSet
-insertFin p1 m1  t2@(Bin p2 m2 _ _)
-    | shorter m2 m1 && mask m2 p1 == mask m2 p2
+insertFin p1 m1  t2@(Bin p2 m2 l r)
+    | m2 `shorter` m1 = if zero p1 m2
+                        then binI p2 m2 (insertFin p1 m1 l) r
+                        else binI p2 m2 l (insertFin p1 m1 r)
+    | match p2 p1 m1 -- m1 `shorterOrEqTo` m2
     = Fin p1 m1
     | otherwise = join p1 (Fin p1 m1) p2 t2
 
 insertFin p1 m1 (Tip p bm) = insertBM p bm (Fin p1 m1)
-insertFin p1 m1 t2@(Fin p2 m2 )
-    | isBuddy p1 m1 p2 m2  = joinBuddy p1 m1 p2 m2
-    | subsetOf p1 m1 p2 m2 = t2
-    | subsetOf p2 m2 p1 m1 = t1
-    |      otherwise       = join p1 t1 p2 t2
+insertFin p1 m1 (Fin p2 m2 )
+    | isBuddy p1 m1 p2 m2  = Fin p1 (m1 * 2)
+    | isBuddy p2 m2 p1 m1  = Fin p2 (m1 * 2)
+    | subsetOf p1 m1 p2 m2 = Fin p2 m2
+    | subsetOf p2 m2 p1 m1 = Fin p1 m1
+    |      otherwise       = join p1 (Fin p1 m1) p2 (Fin p2 m2)
   where
-    t1 = Fin p1 m1
-    isBuddy _ _ _ _ = undefined
-    joinBuddy _ _ _ _ = undefined
-    subsetOf _ _ _ _ = undefined
+    isBuddy p1 m1 p2 m2 = m1 == m2 && p1 + m1 == p2
+    subsetOf p1 m1 p2 m2 = (m2 `shorter` m1) && match p1 p2 m2
 
 insertFin p m Nil = Fin p m
 
