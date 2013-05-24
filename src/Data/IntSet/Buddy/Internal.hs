@@ -88,13 +88,10 @@ module Data.IntSet.Buddy.Internal
 import Data.Bits as Bits
 import Data.Bits.Extras
 import Data.Data
-import Data.Int
 import qualified Data.List as L
 import Data.Monoid
 import Data.Ord
 import Data.Word
-import Data.Typeable
-import Debug.Trace
 
 
 -- | Prefix is used to distinguish subtrees by its prefix bits.  When
@@ -357,7 +354,9 @@ splitFin p m
 
 
 complement :: IntSet -> IntSet
-complement = undefined
+complement Nil = universe
+complement _   = error "complement: not implemented"
+
 
 {--------------------------------------------------------------------
   Combine
@@ -410,8 +409,6 @@ insertFin p1 m1 (Fin p2 m2 )
     | subsetOf p1 m1 p2 m2 = Fin p2 m2
     | subsetOf p2 m2 p1 m1 = Fin p1 m1
     |      otherwise       = join p1 (Fin p1 m1) p2 (Fin p2 m2)
-  where
-    isBuddy p1 m1 p2 m2 = m1 == m2 && p1 + m1 == p2
 
 insertFin p m Nil = Fin p m
 
@@ -419,9 +416,16 @@ insertFin p m Nil = Fin p m
 unions :: [IntSet] -> IntSet
 unions = L.foldl' union empty
 
+
+-- test if the two Fin is good to merge
+isBuddy :: Prefix -> Mask -> Prefix -> Mask -> Bool
+isBuddy p1 m1 p2 m2 = m1 == m2 && p1 + m1 == p2
+{-# INLINE isBuddy #-}
+
 -- used to if one Fin is subset of the another Fin
 subsetOf :: Prefix -> Mask -> Prefix -> Mask -> Bool
 subsetOf p1 m1 p2 m2 = (m2 `shorter` m1) && match p1 p2 m2
+{-# INLINE subsetOf #-}
 
 {--------------------------------------------------------------------
   Intersection
@@ -454,13 +458,13 @@ intersection    Nil             _            = Nil
 
 
 intersectFin :: Prefix -> Mask -> IntSet -> IntSet
-intersectFin p1 m1 (Bin p2 m2 l r) = undefined
+intersectFin _ _ (Bin _ _ _ _) = undefined
 --  | nomatch
 intersectFin p1 m1 (Tip p2 bm2)
   | match p2 p1 m1 = Tip p2 bm2
   |    otherwise   = Nil
 
-intersectFin p1 m1 (Fin p2 m2)
+intersectFin _ _ (Fin p2 m2)
   | undefined = Fin p2 m2
   | otherwise = Nil
 
@@ -752,11 +756,7 @@ foldrBits p f acc bm = go 0
       |   i == 64    = acc
       | testBit bm i = f (p + i) (go (succ i))
       |   otherwise  = go (succ i)
-{-# SPECIALIZE
-  foldrBits :: Int
-            -> (Int -> IntSet -> IntSet)
-            -> IntSet -> BitMap -> IntSet
-  #-}
+
 
 isFull :: BitMap -> Bool
 isFull x = x == Bits.complement 0
