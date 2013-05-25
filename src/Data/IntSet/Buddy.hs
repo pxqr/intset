@@ -32,8 +32,11 @@
 --     worst case (e.g. sparse set) or O(k) in best case (e.g. one
 --     single interval).
 --
+--   Note that some operations will take centuries to compute. For
+--   exsample @map id universe@ will never end as well as filter with
+--   conjunction with universe, naturals, positives, negatives.
+--
 --   -- TODO Fin explanation
---   -- TODO move to Internal.hs
 --
 {-# LANGUAGE CPP #-}
 module Data.IntSet.Buddy

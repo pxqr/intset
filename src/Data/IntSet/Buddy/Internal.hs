@@ -562,6 +562,9 @@ findMaxBM = error "findMaxBM"  --fromIntegral . leadingZeros
 -- | /O(n * min(W, n))/.
 --   Apply the function to each element of the set.
 --
+--   Do not use this operation with the 'universe', 'naturals' or
+--   'negatives' sets.
+--
 map :: (Key -> Key) -> IntSet -> IntSet
 map f = fromList . L.map f . toList
 {-# INLINE map #-}
@@ -586,6 +589,10 @@ foldr f a = wrap
     go z  Nil          = z
 
 -- | /O(n)/. Filter all elements that satisfy the predicate.
+--
+--   Do not use this operation with the 'universe', 'naturals' or
+--   'negatives' sets.
+--
 filter :: (Key -> Bool) -> IntSet -> IntSet
 filter f = go
   where
