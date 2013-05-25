@@ -257,9 +257,8 @@ member !x = go
       |    zero x m   = go l
       |   otherwise   = go r
 
-      -- FIX why not testBit bm (bitmapOf x)  ?
     go (Tip y  bm)   = prefixOf x == y && bitmapOf x .&. bm /= 0
-    go (Fin p  m)    = match x p m && m .&. x == m
+    go (Fin p  m)    = p <= x && (x <= (p + m - 1))
     go  Nil          = False
 
 -- | /O(min(W, n))/ or /O(1)/.
@@ -860,7 +859,6 @@ maskW i m = intFromNat (i .&. (Bits.complement (m-1) `xor` m))
 finMask :: Mask -> Mask
 finMask m = m `shiftR` 1
 {-# INLINE finMask #-}
-
 
 {----------------------------------------------------------------------
   Functions that generate Prefix and BitMap of a Key or a Suffix.

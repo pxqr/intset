@@ -136,6 +136,26 @@ prop_min :: [Int] -> Bool
 prop_min [] = True
 prop_min xs = findMin (fromList xs) == L.minimum xs
 
+prop_universe :: [Int] -> Bool
+prop_universe = all (`member` universe)
+
+prop_naturals :: [Int] -> Bool
+prop_naturals = all check
+  where
+    check x |   x >= 0  = member x naturals
+            | otherwise = True
+
+prop_negatives :: [Int] -> Bool
+prop_negatives = all check
+  where
+    check x |   x < 0   = member x negatives
+            | otherwise = True
+
+prop_minInSet :: IntSet -> Bool
+prop_minInSet s
+  |  S.null s = True
+  | otherwise = member (findMin s) s
+
 -- TODO tests specialized for Fin
 -- TODO tests for universy
 
@@ -145,6 +165,10 @@ main = defaultMain
   , testProperty "singleton"            prop_singleton
   , testProperty "insertLookup"         prop_insertLookup
   , testProperty "insert delete"        prop_insertDelete
+
+  , testProperty "universe"             prop_universe
+  , testProperty "naturals"             prop_naturals
+  , testProperty "negatives"            prop_negatives
 
   , testProperty "size"                 prop_size
   , testProperty "sort"                 prop_sort
@@ -172,6 +196,7 @@ main = defaultMain
   , testProperty "union top"            prop_unionTop
   , testProperty "union idemp"          prop_unionIdemp
 
+  , testProperty "minima in set"        prop_minInSet
   , testProperty "intersection lists"        prop_intersection
   , testProperty "intersection commutative"  prop_intersectComm
   , testProperty "intersection associative"  prop_intersectAssoc
