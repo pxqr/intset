@@ -174,9 +174,11 @@ data IntSet
 --   * Bin is never contain two Fins with masks equal to mask of Bin
 --   * Bin is never contain two full tips with masks equal to mask of the Bin
 --   * Mask becomes smaller at each child.
+--   * Bin, Fin, Tip masks is always power of two
+--   * Fin mask is always greater or equal than size of bits in word.
 --   * Bin left subtree contains element each of which is less than each element
 --     of right subtree
---   * Fin is never full
+--   * Tin is never full
 --
 --  See 'binI' to find out when two intsets should be merged into one.
 --
@@ -313,7 +315,7 @@ insertBM !kx !bm = go
       | kx' == kx = tipI kx (bm .|. bm')
       | otherwise = join kx (Tip kx bm) kx' t
 
-    go t@(Fin   p m  ) -- TODO check if div not optimized
+    go t@(Fin   p m  )
       | nomatch kx p (finMask m) = join kx (Tip kx bm) p t
       |        otherwise          = t
 
@@ -336,7 +338,7 @@ deleteBM !kx !bm = go
       | kx == kx'  = tipD kx (bm' .&. Bits.complement bm)
       | otherwise  = join kx (Tip kx bm) kx' t
 
-    go t@(Fin p m) -- TODO check if div not optimized
+    go t@(Fin p m) -- TODO delete 0 universe doesn't work
       | nomatch kx p (finMask m) = t
       |       otherwise          = deleteBM kx bm (splitFin p m)
 
@@ -404,11 +406,11 @@ insertFin p1 m1  t2@(Bin p2 m2 l r)
 
 insertFin p1 m1 (Tip p bm) = insertBM p bm (Fin p1 m1)
 insertFin p1 m1 (Fin p2 m2 )
-    | isBuddy p1 m1 p2 m2  = Fin p1 (m1 * 2)
-    | isBuddy p2 m2 p1 m1  = Fin p2 (m1 * 2)
-    | subsetOf p1 m1 p2 m2 = Fin p2 m2
-    | subsetOf p2 m2 p1 m1 = Fin p1 m1
-    |      otherwise       = join p1 (Fin p1 m1) p2 (Fin p2 m2)
+    |    isBuddy p1 m1 p2 m2     = Fin p1 (m1 * 2)
+    |    isBuddy p2 m2 p1 m1     = Fin p2 (m1 * 2)
+    | properSubsetOf p1 m1 p2 m2 = Fin p2 m2
+    | properSubsetOf p2 m2 p1 m1 = Fin p1 m1
+    |         otherwise          = join p1 (Fin p1 m1) p2 (Fin p2 m2)
 
 insertFin p m Nil = Fin p m
 
@@ -423,10 +425,9 @@ isBuddy p1 m1 p2 m2 = m1 == m2 && p1 + m1 == p2
 {-# INLINE isBuddy #-}
 
 -- used to if one Fin is subset of the another Fin
-subsetOf :: Prefix -> Mask -> Prefix -> Mask -> Bool
-subsetOf p1 m1 p2 m2 = (m2 `shorter` m1) && match p1 p2 m2
-                       && (m2 .&. p1 == m2 .&. p2)
-{-# INLINE subsetOf #-}
+properSubsetOf :: Prefix -> Mask -> Prefix -> Mask -> Bool
+properSubsetOf p1 m1 p2 m2 = (m2 `shorter` m1) && matchFin p1 p2 m2
+{-# INLINE properSubsetOf #-}
 
 unionBM :: Prefix -> BitMap -> IntSet -> IntSet
 unionBM p bm t = case tip p bm of
@@ -466,17 +467,30 @@ intersection    Nil             _            = Nil
 
 
 intersectFin :: Prefix -> Mask -> IntSet -> IntSet
-intersectFin _ _ (Bin _ _ _ _) = undefined
+intersectFin p1 m1 (Bin p2 m2 l r)
+  | undefined = binD p2 m2 (intersectFin p1 m1 l) (intersectFin p1 m1 r)
+  | undefined = intersectFin p1 m1 l
+  | undefined = intersectFin p1 m1 r
+  | undefined = Nil
 --  | nomatch
 intersectFin p1 m1 (Tip p2 bm2)
-  | match p2 p1 m1 = Tip p2 bm2
-  |    otherwise   = Nil
+  | matchFin p2 p1 m1 = Tip p2 bm2
+  |      otherwise    = Nil
 
-intersectFin _ _ (Fin p2 m2)
-  | undefined = Fin p2 m2
-  | otherwise = Nil
+-- Fins are never just intersects:
+--   * one fin is either subset or superset of the other
+--   * or they are disjoint
+-- due power of two masks and prefixes
+--
+intersectFin p1 m1 (Fin p2 m2)
+  | finSubsetOf p1 m1 p2 m2 = Fin p2 m2
+  | finSubsetOf p2 m2 p1 m1 = Fin p1 m1
+  |         otherwise       = Nil
+intersectFin _ _    Nil     = Nil
 
-intersectFin _ _    Nil          = Nil
+-- not proper subset, just subset of
+finSubsetOf :: Prefix -> Mask -> Prefix -> Mask -> Bool
+finSubsetOf p1 m1 p2 m2 = (m2 `shorterEq` m1) && matchFin p1 p2 m2
 
 
 intersectBM :: Prefix -> BitMap -> IntSet -> IntSet
@@ -490,8 +504,8 @@ intersectBM p1 bm1 (Tip p2 bm2 )
   | otherwise = Nil
 
 intersectBM p1 bm1 (Fin p2 m2)
-  | match p1 p2 m2 = Tip p1 bm1
-  |    otherwise   = Nil
+  | matchFin p1 p2 m2 = Tip p1 bm1
+  |      otherwise    = Nil
 
 intersectBM _  _    Nil        = Nil
 
@@ -723,6 +737,9 @@ origSize  Nil          = 1
 savedSpace :: IntSet -> Int
 savedSpace s = origSize s - wordCount s
 
+bsSize :: IntSet -> Int
+bsSize s = findMax s `div` 8
+
 ppStats :: IntSet -> IO ()
 ppStats s = do
   putStrLn $ "Bin count: " ++ show (binCount s)
@@ -733,11 +750,17 @@ ppStats s = do
   putStrLn $ "Size in bytes: " ++ show (treeSize * 8)
 
   let savedSize = savedSpace s
-  putStrLn $ "Saved space:   " ++ show (savedSize * 8)
+  let bssize    = bsSize s
+  let savedSizeBS = bssize - treeSize * 8
+  putStrLn $ "Saved space over dense set:  " ++ show (savedSize * 8)
+  putStrLn $ "Saved space over bytestring: " ++ show (savedSizeBS)
 
   let orig = origSize s
-  let per = (fromIntegral savedSize / fromIntegral orig) * (100 :: Double)
-  putStrLn $ "Percent saved: " ++ show per ++ "%"
+  let per   = (fromIntegral savedSize / fromIntegral orig) * (100 :: Double)
+  let perBS = (fromIntegral savedSizeBS / fromIntegral bssize) * (100 :: Double)
+  putStrLn $ "Percent saved over dense set:  " ++ show per ++ "%"
+
+  putStrLn $ "Percent saved over bytestring: " ++ show perBS ++ "%"
 
 showTree :: IntSet -> String
 showTree = go 0
@@ -820,6 +843,10 @@ match :: Int -> Prefix -> Mask -> Bool
 match i p m = mask i m == p
 {-# INLINE match #-}
 
+-- TODO optimize this
+matchFin :: Int -> Prefix -> Mask -> Bool
+matchFin i p m = match i p m && (m .&. i == m .&. p)
+
 nomatch :: Int -> Prefix -> Mask -> Bool
 nomatch i p m = mask i m /= p
 {-# INLINE nomatch #-}
@@ -827,6 +854,10 @@ nomatch i p m = mask i m /= p
 shorter :: Mask -> Mask -> Bool
 shorter m1 m2 = natFromInt m1 > natFromInt m2
 {-# INLINE shorter #-}
+
+shorterEq :: Mask -> Mask -> Bool
+shorterEq m1 m2 = natFromInt m1 >= natFromInt m2
+{-# INLINE shorterEq #-}
 
 branchMask :: Prefix -> Prefix -> Mask
 branchMask p1 p2

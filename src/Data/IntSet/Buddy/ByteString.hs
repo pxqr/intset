@@ -27,6 +27,12 @@ import Data.Monoid
 
 import Data.IntSet.Buddy.Internal
 
+{-
+  it seems like we have this conversion hella fast by desing
+  e.g. read by blocks(bitmaps), fast merge, fast 'bin'
+  but we need to make memory access patterns linear
+
+-}
 
 fromByteString :: ByteString -> IntSet
 fromByteString bs =
@@ -65,6 +71,8 @@ fromByteString bs =
         goBytes :: Int -> IntSet -> IntSet
         goBytes !x !s | x == len = s
         goBytes  _  _ = error "not implemented"
+
+-- TODO split by 0 before building bytestring, such that we throw away negative ints
 
 toBuilder :: IntSet -> Builder
 toBuilder = snd . go 0
