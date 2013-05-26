@@ -71,6 +71,7 @@ module Data.IntSet.Buddy
          -- * Combine
        , union, unions
        , intersection, intersections
+       , difference
 
          -- * Conversion
          -- ** Lists

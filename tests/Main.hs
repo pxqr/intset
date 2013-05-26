@@ -6,7 +6,7 @@ import Test.QuickCheck hiding ((.&.))
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2
 
-import Data.List as L (sort, nub, map, filter, minimum, maximum, intersect)
+import Data.List as L (sort, nub, map, filter, minimum, intersect)
 import Data.IntSet.Buddy as S
 import Data.Monoid
 
@@ -38,9 +38,6 @@ prop_sort :: [Int] -> Bool
 prop_sort xs' = toList (fromList xs) == L.nub (L.sort xs)
   where
     xs = L.map abs xs'
-
-prop_sortBS :: [Int] -> Bool
-prop_sortBS = undefined -- TODO
 
 prop_valid :: IntSet -> Bool
 prop_valid = isValid
@@ -96,6 +93,7 @@ prop_eq :: [Int] -> [Int] -> Bool
 prop_eq a b
     | a' == b' = fromList a' == fromList b'
     | a' /= b' = fromList a' /= fromList b'
+    | otherwise = error "prop_eq: impossible"
   where
     a' = nub (sort a)
     b' = nub (sort b)
@@ -168,6 +166,31 @@ prop_minInSet s
 -- TODO tests specialized for Fin
 -- TODO tests for universy
 
+prop_differenceMember :: IntSet -> IntSet -> Bool
+prop_differenceMember a b = all (`notMember` difference a b) (toList b)
+
+prop_differenceIntersection :: IntSet -> IntSet -> Bool
+prop_differenceIntersection a b = (difference a b `intersection` b) == empty
+
+prop_differenceSize :: IntSet -> IntSet -> Bool
+prop_differenceSize a b = size (difference a b) <= size a
+
+prop_differenceSubset :: IntSet -> IntSet -> Bool
+prop_differenceSubset = undefined
+-- TODO implement subset
+
+prop_differenceDeMorgan :: IntSet -> IntSet -> IntSet -> Bool
+prop_differenceDeMorgan a b c =
+      (a `difference` (b `intersection` c))
+  == ((a `difference` b) `union` (a `difference` b))
+  &&
+      (a `difference` (b `union` c))
+  == ((a `difference` b) `intersection` (a `difference` c))
+
+prop_differenceDistributive :: IntSet -> IntSet -> IntSet -> Bool
+prop_differenceDistributive a b c =
+     ((a `union` b) `difference` c)
+  == ((a `difference` c) `union` (b `difference` c))
 
 
 main :: IO ()
@@ -216,9 +239,16 @@ main = defaultMain
   , testProperty "intersection lists"        prop_intersection
   , testProperty "intersection commutative"  prop_intersectComm
   , testProperty "intersection associative"  prop_intersectAssoc
+  , testProperty "intersection idemp"        prop_intersectIdemp
   , testProperty "intersection left empty"   prop_intersectLeft
   , testProperty "intersection right empty"  prop_intersectRight
   , testProperty "intersection bot"          prop_intersectBot
+
+  , testProperty "difference member"         prop_differenceMember
+  , testProperty "difference intersection"   prop_differenceIntersection
+  , testProperty "difference size"           prop_differenceSize
+  , testProperty "difference de morgan"      prop_differenceDeMorgan
+  , testProperty "difference distributive"   prop_differenceDistributive
 
   , testProperty "min"                  prop_min
   , testProperty "valid"                prop_valid

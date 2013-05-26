@@ -53,6 +53,7 @@ module Data.IntSet.Buddy.Internal
          -- * Combine
        , union, unions
        , intersection, intersections
+       , difference
 
          -- * Conversion
          -- ** Lists
@@ -525,6 +526,10 @@ intersections = L.foldl' intersection empty
   Difference
 --------------------------------------------------------------------}
 
+-- Since difference is no commutative it's simple to match all patterns
+-- so WARN dublicated code
+
+-- | /O(n + m)/. Find difference of the two sets.
 difference :: IntSet -> IntSet -> IntSet
 difference t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
     | m1 `shorter` m2 = leftiest
@@ -532,11 +537,28 @@ difference t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
     |     p1 == p2    = binD p1 m1 (difference l1 l2) (difference r1 r2)
     |    otherwise    = t1
   where
-    leftiest = undefined
-    rightiest = undefined
+    leftiest
+      | nomatch p2 p1 m1 = t1
+      |    zero p2 m1    = binD p1 m1 (difference l1 t2) r1
+      |     otherwise    = binD p1 m1 l1 (difference r1 t2)
 
-difference Nil _   = Nil
-difference t   Nil = t
+    rightiest
+      | nomatch p1 p2 m2 = t1
+      |    zero p1 m2    = difference t1 l2
+      |     otherwise    = difference t1 r2
+
+difference t1@(Bin _ _ _ _)    (Tip p bm)      = deleteBM p bm t1
+difference t1@(Bin _ _ _ _)    (Fin _ _)       = undefined
+difference t1@(Bin _ _ _ _)     Nil            = t1
+difference t1@(Tip p1 bm )     (Bin p2 m2 _ _) = undefined
+difference t1@(Tip p1 bm)      (Fin p2 m2 )    = undefined
+difference t1@(Tip p bm)        Nil            = Nil
+difference t1@(Fin _ _)     t2@(Bin _ _ _ _)   = undefined
+difference t1@(Fin _ _)     t2@(Tip _ _)       = undefined
+difference t1@(Fin _ _)     t2@(Fin _ _)       = undefined
+difference t1@(Fin _ _)         Nil            = undefined
+difference t1@(Tip _ _)         Nil            = t1
+difference     Nil              _              = Nil
 
 {--------------------------------------------------------------------
   Min/max
