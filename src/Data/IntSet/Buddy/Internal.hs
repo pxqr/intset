@@ -170,27 +170,32 @@ data IntSet
   Invariants
 --------------------------------------------------------------------}
 -- |
---   * Nil is never child of Bin
---   * Bin is never contain two Fins with masks equal to mask of Bin
---   * Bin is never contain two full tips with masks equal to mask of the Bin
---   * Mask becomes smaller at each child.
---   * Bin, Fin, Tip masks is always power of two
---   * Fin mask is always greater or equal than size of bits in word.
---   * Bin left subtree contains element each of which is less than each element
---     of right subtree
---   * Tin is never full
+--   + Nil is never child of Bin;
+--   + Bin is never contain two Fins with masks equal to mask of Bin;
+--   - Mask becomes smaller at each child;
+--   - Bin, Fin, Tip masks is always power of two;
+--   + Fin mask is always greater or equal than size of bits in word;
+--   - Bin left subtree contains element each of which is less than each element
+--     of right subtree;
+--   + Tip bitmap is never full;
+--   + Tip mask is multiple of word bit count;
 --
 --  See 'binI' to find out when two intsets should be merged into one.
 --
 -- TODO check 2,3,4 invariants
 --
 isValid :: IntSet -> Bool
-isValid  Nil      = True
-isValid (Tip _ _) = True
-isValid (Fin _ _) = True
+isValid  Nil       = True
+isValid (Tip p bm) = not (isFull bm) && (p `mod` 64 == 0)
+isValid (Fin _ m ) = m >= 64
 isValid (Bin _  _ Nil _  ) = error "Bin _ _ Nil _"
 isValid (Bin _  _ _   Nil) = error "Bin _ _ _   Nil"
-isValid (Bin _  _  l r) = isValid l && isValid r
+isValid (Bin _  m (Fin p1 m1) (Fin p2 m2))
+  = not (m == m1 && m == m2)
+isValid (Bin _  m l r)
+  = isValid l && isValid r
+
+isPowerOf2 x = (x - 1 .&. x) == 0
 
 {--------------------------------------------------------------------
   Instances

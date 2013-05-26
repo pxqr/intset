@@ -178,7 +178,7 @@ main = defaultMain
 
   , testProperty "size"                 prop_size
   , testProperty "sort"                 prop_sort
-  , testProperty "valid"                prop_valid
+
 
   , testProperty "read . show == id"    prop_showRead
 
@@ -212,4 +212,6 @@ main = defaultMain
   , testProperty "intersection bot"          prop_intersectBot
 
   , testProperty "min"                  prop_min
+  , testProperty "valid"                prop_valid
+
   ]
