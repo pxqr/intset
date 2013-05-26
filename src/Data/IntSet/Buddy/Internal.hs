@@ -16,9 +16,9 @@
 -- TODO use 'seq' instead of bang patterns
 {-# LANGUAGE BangPatterns #-}
 
-#if __GLASGOW_HASKELL__ >= 702
--- TODO fix this
--- {-# LANGUAGE Safe #-}
+#if __GLASGOW_HASKELL__ >= 720
+-- TODO The only unsafe import is Data.Bits.Extras
+{-# LANGUAGE Trustworthy #-}
 #endif
 
 module Data.IntSet.Buddy.Internal

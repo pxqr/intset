@@ -44,6 +44,11 @@
 --   -- TODO Fin explanation
 --
 {-# LANGUAGE CPP #-}
+
+#if __GLASGOW_HASKELL__ >= 720
+{-# LANGUAGE Safe #-}
+#endif
+
 module Data.IntSet.Buddy
        (
          -- * Types
