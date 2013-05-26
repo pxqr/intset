@@ -252,7 +252,8 @@ null _   = False
 size :: IntSet -> Int
 size (Bin _  _  l r) = size l + size r
 size (Tip _  bm    ) = popCount bm
-size (Fin _  m     ) = m
+size (Fin _  m     ) |    m > 0  = m
+                     | otherwise = error "IntSet.size: int overflow"
 size  Nil            = 0
 
 -- | /O(min(W, n))/ or /O(1)/.
@@ -426,9 +427,9 @@ unions :: [IntSet] -> IntSet
 unions = L.foldl' union empty
 
 
--- test if the two Fin is good to merge
+-- test if the two Fins is good to merge
 isBuddy :: Prefix -> Mask -> Prefix -> Mask -> Bool
-isBuddy p1 m1 p2 m2 = m1 == m2 && p1 + m1 == p2
+isBuddy p1 m1 p2 m2 = m1 == m2 && xor p1 p2 == m1 && p1 .&. m1 == 0
 {-# INLINE isBuddy #-}
 
 -- used to if one Fin is subset of the another Fin
@@ -525,7 +526,17 @@ intersections = L.foldl' intersection empty
 --------------------------------------------------------------------}
 
 difference :: IntSet -> IntSet -> IntSet
-difference = error "difference: not implemented"
+difference t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
+    | m1 `shorter` m2 = leftiest
+    | m2 `shorter` m1 = rightiest
+    |     p1 == p2    = binD p1 m1 (difference l1 l2) (difference r1 r2)
+    |    otherwise    = t1
+  where
+    leftiest = undefined
+    rightiest = undefined
+
+difference Nil _   = Nil
+difference t   Nil = t
 
 {--------------------------------------------------------------------
   Min/max
@@ -591,7 +602,7 @@ map f = fromList . L.map f . toList
 {-# INLINE map #-}
 
 listFin :: Prefix -> Mask -> [Key]
-listFin p m = [p..p + m - 1]
+listFin p m = [p..(p + m) - 1]
 
 -- | /O(n)/.  Fold the element using the given right associative
 --   binary operator.
