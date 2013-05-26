@@ -212,10 +212,10 @@ main = defaultMain
   , testProperty "insertLookup"         prop_insertLookup
   , testProperty "insert delete"        prop_insertDelete
 
-  , testProperty "universe member"      prop_universeMember
-  , testProperty "universe delete"      prop_universeDelete
-  , testProperty "universe insert"      prop_universeInsert
-  , testProperty "universe nat neg"     prop_universeNatNeg
+--  , testProperty "universe member"      prop_universeMember
+--  , testProperty "universe delete"      prop_universeDelete
+--  , testProperty "universe insert"      prop_universeInsert
+--  , testProperty "universe nat neg"     prop_universeNatNeg
 
   , testProperty "naturals"             prop_naturals
   , testProperty "negatives"            prop_negatives

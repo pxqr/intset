@@ -2,7 +2,6 @@
 module Main (main) where
 
 import Criterion.Main
-import Control.DeepSeq
 
 import Data.Bits
 import           Data.ByteString (ByteString)
@@ -13,7 +12,7 @@ import Data.IntSet.Buddy.ByteString as SB
 import Data.List as L
 import Data.Word
 
-instance NFData SB.IntSet
+
 
 
 fromByteString :: ByteString -> S.IntSet

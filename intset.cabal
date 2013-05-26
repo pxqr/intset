@@ -47,6 +47,7 @@ library
   build-depends:       base == 4.*
                      , bits-extras >= 0.1.2
                      , bytestring  >= 0.10.2
+                     , deepseq
 
   hs-source-dirs:      src
   ghc-options:         -Wall -DTESTING

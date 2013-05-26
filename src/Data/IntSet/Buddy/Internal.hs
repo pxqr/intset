@@ -88,6 +88,8 @@ module Data.IntSet.Buddy.Internal
        , putTree, putRaw
        ) where
 
+
+import Control.DeepSeq
 import Data.Bits as Bits
 import Data.Bits.Extras
 import Data.Data
@@ -239,6 +241,9 @@ instance Num IntSet where
 instance Bounded IntSet where
   minBound = empty
   maxBound = universe
+
+instance NFData IntSet where
+
 
 {--------------------------------------------------------------------
   Query
