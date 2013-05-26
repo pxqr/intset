@@ -610,7 +610,7 @@ foldr f a = wrap
 filter :: (Key -> Bool) -> IntSet -> IntSet
 filter f = go
   where
-    go (Bin p m l r) = binD m p (go l) (go r)
+    go (Bin p m l r) = binD p m (go l) (go r)
     go (Tip p bm) = fromList $ L.filter f $ toList (Tip p bm) -- FIX use foldrBits
     go (Fin p m)  = fromList $ L.filter f $ listFin p m -- FIX fromDistinctAscList
     go  Nil       = Nil

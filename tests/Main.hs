@@ -61,7 +61,7 @@ prop_unionTop :: IntSet -> Bool
 prop_unionTop a = a <> a == a
 
 prop_unionIdemp :: IntSet -> IntSet -> Bool
-prop_unionIdemp a b = ((a <> b) <> b) == a
+prop_unionIdemp a b = ((a <> b) <> b) == a <> b
 
 prop_intersection :: [Int] -> [Int] -> Bool
 prop_intersection a b =
@@ -139,6 +139,9 @@ prop_min xs = findMin (fromList xs) == L.minimum xs
 prop_universe :: [Int] -> Bool
 prop_universe = all (`member` universe)
 
+prop_universeDelete :: Int -> Bool
+prop_universeDelete i = notMember i (delete i universe)
+
 prop_naturals :: [Int] -> Bool
 prop_naturals = all check
   where
@@ -159,6 +162,8 @@ prop_minInSet s
 -- TODO tests specialized for Fin
 -- TODO tests for universy
 
+
+
 main :: IO ()
 main = defaultMain
   [ testProperty "empty"                prop_empty
@@ -167,6 +172,7 @@ main = defaultMain
   , testProperty "insert delete"        prop_insertDelete
 
   , testProperty "universe"             prop_universe
+  , testProperty "universe delete"      prop_universeDelete
   , testProperty "naturals"             prop_naturals
   , testProperty "negatives"            prop_negatives
 
@@ -197,6 +203,7 @@ main = defaultMain
   , testProperty "union idemp"          prop_unionIdemp
 
   , testProperty "minima in set"        prop_minInSet
+
   , testProperty "intersection lists"        prop_intersection
   , testProperty "intersection commutative"  prop_intersectComm
   , testProperty "intersection associative"  prop_intersectAssoc
