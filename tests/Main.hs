@@ -42,6 +42,13 @@ prop_sort xs' = toList (fromList xs) == L.nub (L.sort xs)
 prop_valid :: IntSet -> Bool
 prop_valid = isValid
 
+prop_unionSize :: IntSet -> IntSet -> Bool
+prop_unionSize a b = size u >= size a
+                  && size u >= size b
+                  && size u <= size a + size b
+  where
+    u = union a b
+
 prop_unionComm :: IntSet -> IntSet -> Bool
 prop_unionComm a b = a <> b == b <> a
 
@@ -59,6 +66,11 @@ prop_unionTop a = a <> a == a
 
 prop_unionIdemp :: IntSet -> IntSet -> Bool
 prop_unionIdemp a b = ((a <> b) <> b) == a <> b
+
+prop_intersectionSize :: IntSet -> IntSet -> Bool
+prop_intersectionSize a b = size i <= size a && size i <= size b
+  where
+    i = intersection a b
 
 prop_intersection :: [Int] -> [Int] -> Bool
 prop_intersection a b =
@@ -226,6 +238,7 @@ main = defaultMain
   , testProperty "filter size"          prop_filterSize
   , testProperty "filtering"            prop_filtering
 
+  , testProperty "union size"           prop_unionSize
   , testProperty "unionLookup"          prop_unionLookup
   , testProperty "union commutative"    prop_unionComm
   , testProperty "union associative"    prop_unionAssoc
@@ -236,6 +249,7 @@ main = defaultMain
 
   , testProperty "minima in set"        prop_minInSet
 
+  , testProperty "intersection size"         prop_intersectionSize
   , testProperty "intersection lists"        prop_intersection
   , testProperty "intersection commutative"  prop_intersectComm
   , testProperty "intersection associative"  prop_intersectAssoc
@@ -243,13 +257,13 @@ main = defaultMain
   , testProperty "intersection left empty"   prop_intersectLeft
   , testProperty "intersection right empty"  prop_intersectRight
   , testProperty "intersection bot"          prop_intersectBot
-
+{-
   , testProperty "difference member"         prop_differenceMember
   , testProperty "difference intersection"   prop_differenceIntersection
   , testProperty "difference size"           prop_differenceSize
   , testProperty "difference de morgan"      prop_differenceDeMorgan
   , testProperty "difference distributive"   prop_differenceDistributive
-
+-}
   , testProperty "min"                  prop_min
   , testProperty "valid"                prop_valid
 
