@@ -93,6 +93,7 @@ import qualified Data.List as L
 import Data.Monoid
 import Data.Ord
 import Data.Word
+import Text.ParserCombinators.ReadP
 
 
 -- | Prefix is used to distinguish subtrees by its prefix bits.  When
@@ -190,12 +191,12 @@ isValid (Tip p bm) = not (isFull bm) && (p `mod` 64 == 0)
 isValid (Fin _ m ) = m >= 64
 isValid (Bin _  _ Nil _  ) = error "Bin _ _ Nil _"
 isValid (Bin _  _ _   Nil) = error "Bin _ _ _   Nil"
-isValid (Bin _  m (Fin p1 m1) (Fin p2 m2))
+isValid (Bin _  m (Fin _ m1) (Fin _ m2))
   = not (m == m1 && m == m2)
-isValid (Bin _  m l r)
+isValid (Bin _  _ l r)
   = isValid l && isValid r
 
-isPowerOf2 x = (x - 1 .&. x) == 0
+--isPowerOf2 x = (x - 1 .&. x) == 0
 
 {--------------------------------------------------------------------
   Instances
@@ -209,11 +210,11 @@ instance Show IntSet where
       list (x : xs) = shows x . showString "," . list xs
 
 instance Read IntSet where
-  readsPrec _ s = do
-    ("{ ", s') <- lex s
-    (xs, s'') <- reads s'
-    ("} ", s''') <- lex s''
-    return (fromList xs, s''')
+  readsPrec _ = readP_to_S $ do
+    "{" <- readS_to_P lex
+    xs  <- readS_to_P reads `sepBy` (skipSpaces >> char ',')
+    "}" <- readS_to_P lex
+    return (fromList xs)
 
 instance Ord IntSet where
   compare = comparing toList
