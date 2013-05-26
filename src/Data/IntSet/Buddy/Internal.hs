@@ -165,7 +165,7 @@ data IntSet
   -- | Empty set. Contains nothing.
   | Nil
   deriving
-    ( Eq -- TODO is propositional equality really fit for equality?
+    ( Eq
 #if __GLASGOW_HASKELL__
     , Typeable, Data
 #endif
@@ -384,7 +384,6 @@ complement _   = error "complement: not implemented"
 
 infixl 6 `union`
 
--- TODO complexity
 -- | /O(n + m)/ or /O(1)/. The union of two sets.
 union :: IntSet -> IntSet -> IntSet
 union t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
