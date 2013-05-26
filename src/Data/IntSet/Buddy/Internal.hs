@@ -382,6 +382,8 @@ complement _   = error "complement: not implemented"
   Union
 --------------------------------------------------------------------}
 
+infixl 6 `union`
+
 -- TODO complexity
 -- | /O(n + m)/ or /O(1)/. The union of two sets.
 union :: IntSet -> IntSet -> IntSet
@@ -453,6 +455,8 @@ unionBM p bm t = case tip p bm of
 {--------------------------------------------------------------------
   Intersection
 --------------------------------------------------------------------}
+
+infixl 7 `intersection`
 
 -- | /O(n + m)/ or /O(1)/. The intersection of two sets.
 intersection :: IntSet -> IntSet -> IntSet
@@ -533,6 +537,8 @@ intersections = L.foldl' intersection empty
 
 -- Since difference is no commutative it's simple to match all patterns
 -- so WARN dublicated code
+
+infixl 6 `difference`
 
 -- | /O(n + m)/. Find difference of the two sets.
 difference :: IntSet -> IntSet -> IntSet

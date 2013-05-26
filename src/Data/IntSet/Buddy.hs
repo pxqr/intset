@@ -6,7 +6,7 @@
 --   Portability :  portable
 --
 --   An efficient implementation of dense integer sets based on
---   Big-Endian PATRICIA tree with buddy suffix compression.
+--   Big-Endian PATRICIA trees with buddy suffix compression.
 --
 --   References:
 --
@@ -19,7 +19,8 @@
 --   containers package. It's expected that Data.IntSet.Buddy will be
 --   slightly slower in randomized settings (e.g. fromList
 --   [1,3..1000000]) but much faster when we have long sequences
---   (e.g. [1..100000]) up to constant time at many main operations.
+--   (e.g. [1..100000]) up to constant time at many main operations
+--   not depending on a set size.
 --
 --   Conventions in complexity notation:
 --
@@ -35,6 +36,10 @@
 --   Note that some operations will take centuries to compute. For
 --   exsample @map id universe@ will never end as well as filter with
 --   conjunction with universe, naturals, positives, negatives.
+--
+--   Also note that some operations like 'union', 'intersection' and
+--   'difference' have overriden from default fixity, so use these
+--   operations with conjunction with infix syntax carefully.
 --
 --   -- TODO Fin explanation
 --
