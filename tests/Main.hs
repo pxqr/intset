@@ -65,8 +65,8 @@ prop_unionIdemp a b = ((a <> b) <> b) == a <> b
 
 prop_intersection :: [Int] -> [Int] -> Bool
 prop_intersection a b =
-  toList (intersection (fromList a) (fromList b))
-  == L.intersect a b
+  intersection (fromList a) (fromList b)
+  == fromList (L.intersect a b)
 
 prop_intersectComm :: IntSet -> IntSet -> Bool
 prop_intersectComm a b = (a `intersection` b) == (b `intersection` a)

@@ -63,6 +63,7 @@ module Data.IntSet.Buddy.Internal
          -- * Internal
          -- ** Types
        , Prefix, Mask, BitMap
+       , finMask, nomatch, match, mask
 
          -- ** Smart constructors
        , tip, tipI, tipD, bin
@@ -70,7 +71,7 @@ module Data.IntSet.Buddy.Internal
        , unionBM
 
          -- ** Debug
-       , shorter, prefixOf, bitmapOf, branchMask
+       , shorter, prefixOf, bitmapOf, branchMask, matchFin
 
          -- *** Stats
        , binCount, tipCount, finCount
@@ -452,7 +453,7 @@ intersection t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
     | m1 `shorter` m2 = leftiest
     | m2 `shorter` m1 = rightiest
     |     p1 == p2    = binD p1 m1 (intersection l1 l2) (intersection r1 r2)
-    |     otherwise   = undefined
+    |     otherwise   = Nil
   where
     leftiest
       | nomatch p2 p1 m1 = Nil
@@ -461,8 +462,8 @@ intersection t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
 
     rightiest
       | nomatch p1 p2 m2 = Nil
-      |     zero p2 m1   = intersection t1 l1
-      |     otherwise    = intersection t1 r1
+      |     zero p1 m2   = intersection t1 l2
+      |     otherwise    = intersection t1 r2
 
 intersection t@(Bin _ _ _ _)   (Tip p bm)    = intersectBM p bm t
 intersection t@(Bin _ _ _ _)   (Fin p m)     = intersectFin p m t
