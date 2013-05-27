@@ -350,7 +350,7 @@ deleteBM !kx !bm = go
 
     go t@(Tip kx' bm')
       | kx == kx'  = tipD kx (bm' .&. Bits.complement bm)
-      | otherwise  = join kx (Tip kx bm) kx' t
+      | otherwise  = t
 
     go t@(Fin p m) -- TODO delete 0 universe doesn't work
       | nomatch kx p (finMask m) = t
@@ -534,8 +534,7 @@ intersections = L.foldl' intersection empty
   Difference
 --------------------------------------------------------------------}
 
--- Since difference is no commutative it's simple to match all patterns
--- so WARN dublicated code
+-- Since difference is not commutative it's simpler to match all patterns
 
 infixl 6 `difference`
 
@@ -558,16 +557,29 @@ difference t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
       |     otherwise    = difference t1 r2
 
 difference t1@(Bin _ _ _ _)    (Tip p bm)      = deleteBM p bm t1
-difference t1@(Bin _ _ _ _)    (Fin _ _)       = undefined
+difference t1@(Bin p1 m1 l r)  (Fin p2 m2)
+    | matchFin p1 p2 m2 = Nil
+    |   match p2 p1 m1  = exclude
+    |     otherwise     = undefined
+  where
+    exclude = undefined
+
 difference t1@(Bin _ _ _ _)     Nil            = t1
-difference t1@(Tip p1 bm )     (Bin p2 m2 _ _) = undefined
-difference t1@(Tip p1 bm)      (Fin p2 m2 )    = undefined
-difference t1@(Tip p bm)        Nil            = Nil
-difference t1@(Fin _ _)     t2@(Bin _ _ _ _)   = undefined
-difference t1@(Fin _ _)     t2@(Tip _ _)       = undefined
-difference t1@(Fin _ _)     t2@(Fin _ _)       = undefined
-difference t1@(Fin _ _)         Nil            = undefined
+difference t1@(Tip p _ )       (Bin p2 m2 l r)
+  | nomatch p p2 m2 = t1
+  |   zero p m2     = difference t1 l
+  |   otherwise     = difference t1 r
+
+difference t1@(Tip _ _)        (Tip p bm)      = deleteBM p bm t1
+difference t1@(Tip p1 _)       (Fin p2 m2 )
+  | matchFin p1 p2 m2 = Nil
+  |     otherwise     = t1
+
 difference t1@(Tip _ _)         Nil            = t1
+difference t1@(Fin _ _)     t2@(Bin _ _ _ _)   = undefined
+difference t1@(Fin _ _)     t2@(Tip p bm)      = deleteBM p bm t1
+difference t1@(Fin _ _)     t2@(Fin _ _)       = undefined
+difference t1@(Fin _ _)         Nil            = t1
 difference     Nil              _              = Nil
 
 {--------------------------------------------------------------------
