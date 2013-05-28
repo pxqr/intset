@@ -64,7 +64,7 @@ module Data.IntSet.Buddy.Internal
          -- * Internal
          -- ** Types
        , Prefix, Mask, BitMap
-       , finMask, nomatch, match, mask
+       , finMask, nomatch, match, mask, insertFin, properSubsetOf
 
          -- ** Smart constructors
        , tip, tipI, tipD, bin
@@ -72,7 +72,7 @@ module Data.IntSet.Buddy.Internal
        , unionBM
 
          -- ** Debug
-       , shorter, prefixOf, bitmapOf, branchMask, matchFin
+       , shorter, prefixOf, bitmapOf, branchMask, matchFin, splitFin
 
          -- *** Stats
        , binCount, tipCount, finCount
@@ -373,7 +373,6 @@ complement :: IntSet -> IntSet
 complement Nil = universe
 complement _   = error "complement: not implemented"
 
-
 {--------------------------------------------------------------------
   Combine
 --------------------------------------------------------------------}
@@ -387,8 +386,11 @@ infixl 6 `union`
 -- | /O(n + m)/ or /O(1)/. The union of two sets.
 union :: IntSet -> IntSet -> IntSet
 union t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
+
     | shorter m1 m2 = leftiest
+
     | shorter m2 m1 = rightiest
+
     | p1 == p2      = binI p1 m1 (union l1 l2) (union r1 r2)
     | otherwise     = join p1 t1 p2 t2
   where
@@ -412,19 +414,20 @@ union    Nil           t         = t
 
 insertFin :: Prefix -> Mask -> IntSet -> IntSet
 insertFin p1 m1  t2@(Bin p2 m2 l r)
-    | m2 `shorter` m1 = if zero p1 m2
-                        then binI p2 m2 (insertFin p1 m1 l) r
-                        else binI p2 m2 l (insertFin p1 m1 r)
-    | match p2 p1 m1 -- m1 `shorterOrEqTo` m2
-    = Fin p1 m1
-    | otherwise = join p1 (Fin p1 m1) p2 t2
+    | ((m2 `shorter` m1) || m1 == m2) && match p1 p2 m2 =
+      if   zero p1 m2
+      then binI p2 m2 (insertFin p1 m1 l) r
+      else binI p2 m2 l (insertFin p1 m1 r)
+    | match p2 p1 (finMask m1) = Fin p1 m1
+    |        otherwise         = join p1 (Fin p1 m1) p2 t2
 
 insertFin p1 m1 (Tip p bm) = insertBM p bm (Fin p1 m1)
-insertFin p1 m1 (Fin p2 m2 )
+insertFin p1 m1 (Fin p2 m2 ) -- TODO simplify
     |    isBuddy p1 m1 p2 m2     = Fin p1 (m1 * 2)
     |    isBuddy p2 m2 p1 m1     = Fin p2 (m1 * 2)
     | properSubsetOf p1 m1 p2 m2 = Fin p2 m2
     | properSubsetOf p2 m2 p1 m1 = Fin p1 m1
+    |     m1 == m2 && p1 == p2   = Fin p1 m1
     |         otherwise          = join p1 (Fin p1 m1) p2 (Fin p2 m2)
 
 insertFin p m Nil = Fin p m
@@ -441,7 +444,7 @@ isBuddy p1 m1 p2 m2 = m1 == m2 && xor p1 p2 == m1 && p1 .&. m1 == 0
 
 -- used to if one Fin is subset of the another Fin
 properSubsetOf :: Prefix -> Mask -> Prefix -> Mask -> Bool
-properSubsetOf p1 m1 p2 m2 = (m2 `shorter` m1) && matchFin p1 p2 m2
+properSubsetOf p1 m1 p2 m2 = (m2 `shorter` m1) && match p1 p2 (finMask m2)
 {-# INLINE properSubsetOf #-}
 
 unionBM :: Prefix -> BitMap -> IntSet -> IntSet

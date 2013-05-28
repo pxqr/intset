@@ -12,9 +12,17 @@ import Data.Monoid
 
 
 instance Arbitrary IntSet where
-  arbitrary = fromList <$> arbitrary
---  shrink (Bin _ _ l r) = [l, r]
---  shrink  _            = []
+--  arbitrary = fromList <$> arbitrary
+  arbitrary = buddy <$> arbitrary
+    where
+      buddy :: [Int] -> IntSet
+      buddy = fromList . concatMap (mk . abs)
+        where
+          mk i = [i * 64 .. i * 64 + 64]
+
+  shrink (Bin _ _ l r) = [l, r]
+  shrink (Fin p m)     = [splitFin p m]
+  shrink  _            = []
 
 prop_empty :: [Int] -> Bool
 prop_empty xs = (not . (`member` empty)) `all` xs

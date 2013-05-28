@@ -52,7 +52,7 @@
 module Data.IntSet.Buddy
        (
          -- * Types
-         IntSet, Key
+         IntSet(..), Key
 
          -- * Query
        , SB.null
@@ -90,7 +90,7 @@ module Data.IntSet.Buddy
 
 #if defined (TESTING)
          -- * Debug
-       , isValid
+       , isValid, splitFin
 #endif
        ) where
 
