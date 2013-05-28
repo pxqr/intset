@@ -80,4 +80,5 @@ benchmark benchmarks
                      , deepseq
                      , intset
 
-  ghc-options:         -O3 -Wall -fllvm -fno-warn-orphans
+  ghc-options:         -O3 -Wall -fno-warn-orphans
+--  -fllvm
