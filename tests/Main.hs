@@ -13,7 +13,8 @@ import Data.Monoid
 
 instance Arbitrary IntSet where
   arbitrary = fromList <$> arbitrary
-  -- TODO instance for shrink
+--  shrink (Bin _ _ l r) = [l, r]
+--  shrink  _            = []
 
 prop_empty :: [Int] -> Bool
 prop_empty xs = (not . (`member` empty)) `all` xs

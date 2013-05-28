@@ -60,7 +60,7 @@ test-suite properties
   build-depends:       base == 4.*
 
                      , test-framework
-                     , test-framework-quickcheck2
+                     , test-framework-quickcheck2 >= 0.3
                      , QuickCheck
 
                      , intset
