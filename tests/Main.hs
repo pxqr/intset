@@ -13,6 +13,7 @@ import Data.Monoid
 
 instance Arbitrary IntSet where
   arbitrary = fromList <$> arbitrary
+  -- TODO instance for shrink
 
 prop_empty :: [Int] -> Bool
 prop_empty xs = (not . (`member` empty)) `all` xs
@@ -191,13 +192,11 @@ prop_differenceSubset :: IntSet -> IntSet -> Bool
 prop_differenceSubset = undefined
 -- TODO implement subset
 
-prop_differenceDeMorgan :: IntSet -> IntSet -> IntSet -> Bool
-prop_differenceDeMorgan a b c =
-      (a `difference` (b `intersection` c))
-  == ((a `difference` b) `union` (a `difference` b))
-  &&
-      (a `difference` (b `union` c))
-  == ((a `difference` b) `intersection` (a `difference` c))
+prop_differenceDeMorgan1 :: IntSet -> IntSet -> IntSet -> Bool
+prop_differenceDeMorgan1 a b c = a - b * c == (a - b) + (a - c)
+
+prop_differenceDeMorgan2 :: IntSet -> IntSet -> IntSet -> Bool
+prop_differenceDeMorgan2 a b c = a - (b + c) == (a - b) * (a - c)
 
 prop_differenceDistributive :: IntSet -> IntSet -> IntSet -> Bool
 prop_differenceDistributive a b c =
@@ -257,13 +256,14 @@ main = defaultMain
   , testProperty "intersection left empty"   prop_intersectLeft
   , testProperty "intersection right empty"  prop_intersectRight
   , testProperty "intersection bot"          prop_intersectBot
-{-
+
   , testProperty "difference member"         prop_differenceMember
   , testProperty "difference intersection"   prop_differenceIntersection
   , testProperty "difference size"           prop_differenceSize
-  , testProperty "difference de morgan"      prop_differenceDeMorgan
+  , testProperty "difference de morgan1"     prop_differenceDeMorgan1
+  , testProperty "difference de morgan2"     prop_differenceDeMorgan2
   , testProperty "difference distributive"   prop_differenceDistributive
--}
+
   , testProperty "min"                  prop_min
   , testProperty "valid"                prop_valid
 

@@ -556,13 +556,10 @@ difference t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
       |    zero p1 m2    = difference t1 l2
       |     otherwise    = difference t1 r2
 
-difference t1@(Bin _ _ _ _)    (Tip p bm)      = deleteBM p bm t1
-difference t1@(Bin p1 m1 l r)  (Fin p2 m2)
-    | matchFin p1 p2 m2 = Nil
-    |   match p2 p1 m1  = exclude
-    |     otherwise     = undefined
-  where
-    exclude = undefined
+difference t1@(Bin _ _ _ _)      (Tip p bm)    = deleteBM p bm t1
+difference t1@(Bin p1 _ _ _)     (Fin p2 m2)
+  | match p1 p2 (finMask m2) = Nil
+  |        otherwise         = difference t1 (splitFin p2 m2)
 
 difference t1@(Bin _ _ _ _)     Nil            = t1
 difference t1@(Tip p _ )       (Bin p2 m2 l r)
@@ -571,14 +568,22 @@ difference t1@(Tip p _ )       (Bin p2 m2 l r)
   |   otherwise     = difference t1 r
 
 difference t1@(Tip _ _)        (Tip p bm)      = deleteBM p bm t1
-difference t1@(Tip p1 _)       (Fin p2 m2 )
-  | matchFin p1 p2 m2 = Nil
-  |     otherwise     = t1
+difference t1@(Tip p1 _)       (Fin p2 m2 ) --
+  | nomatch p1 p2 (finMask m2) = t1         --
+  |          otherwise         = Nil        --
 
 difference t1@(Tip _ _)         Nil            = t1
-difference t1@(Fin _ _)     t2@(Bin _ _ _ _)   = undefined
-difference t1@(Fin _ _)     t2@(Tip p bm)      = deleteBM p bm t1
-difference t1@(Fin _ _)     t2@(Fin _ _)       = undefined
+difference t1@(Fin p1 m1)   t2@(Bin p2 _ _ _)
+  | match p2 p1 (finMask m1) = difference (splitFin p1 m1) t2
+  |         otherwise        = t1
+
+difference t1@(Fin _ _)        (Tip p bm)      = deleteBM p bm t1
+difference t1@(Fin p1 m1)     t2@(Fin p2 m2)
+  | m1 `shorter` m2 = undefined --difference (splitFin p1 m1) t2
+  | m2 `shorter` m1 = undefined
+  |    p1 == p2     = Nil
+  |    otherwise    = t1
+
 difference t1@(Fin _ _)         Nil            = t1
 difference     Nil              _              = Nil
 
