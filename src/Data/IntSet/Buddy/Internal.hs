@@ -65,6 +65,7 @@ module Data.IntSet.Buddy.Internal
          -- ** Types
        , Prefix, Mask, BitMap
        , finMask, nomatch, match, mask, insertFin, properSubsetOf
+       , intersectBM
 
          -- ** Smart constructors
        , tip, tipI, tipD, bin
@@ -73,6 +74,7 @@ module Data.IntSet.Buddy.Internal
 
          -- ** Debug
        , shorter, prefixOf, bitmapOf, branchMask, matchFin, splitFin
+       , finSubsetOf
 
          -- *** Stats
        , binCount, tipCount, finCount
@@ -487,15 +489,17 @@ intersection    Nil             _            = Nil
 
 
 intersectFin :: Prefix -> Mask -> IntSet -> IntSet
-intersectFin p1 m1 (Bin p2 m2 l r)
-  | undefined = binD p2 m2 (intersectFin p1 m1 l) (intersectFin p1 m1 r)
-  | undefined = intersectFin p1 m1 l
-  | undefined = intersectFin p1 m1 r
-  | undefined = Nil
---  | nomatch
+intersectFin p1 m1 t@(Bin p2 m2 l r)
+  | (m2 `shorter` m1) || m1 == m2 && match p1 p2 m2
+  = if zero p1 m2
+    then intersectFin p1 m1 l
+    else intersectFin p1 m1 r
+  | match p2 p1 (finMask m1) = t
+  |        otherwise         = Nil
+
 intersectFin p1 m1 (Tip p2 bm2)
-  | matchFin p2 p1 m1 = Tip p2 bm2
-  |      otherwise    = Nil
+  | match p2 p1 (finMask m1) = Tip p2 bm2
+  |         otherwise        = Nil
 
 -- Fins are never just intersects:
 --   * one fin is either subset or superset of the other
@@ -503,14 +507,14 @@ intersectFin p1 m1 (Tip p2 bm2)
 -- due power of two masks and prefixes
 --
 intersectFin p1 m1 (Fin p2 m2)
-  | finSubsetOf p1 m1 p2 m2 = Fin p2 m2
-  | finSubsetOf p2 m2 p1 m1 = Fin p1 m1
+  | finSubsetOf p1 m1 p2 m2 = Fin p1 m1
+  | finSubsetOf p2 m2 p1 m1 = Fin p2 m2
   |         otherwise       = Nil
 intersectFin _ _    Nil     = Nil
 
 -- not proper subset, just subset of
 finSubsetOf :: Prefix -> Mask -> Prefix -> Mask -> Bool
-finSubsetOf p1 m1 p2 m2 = (m2 `shorterEq` m1) && matchFin p1 p2 m2
+finSubsetOf p1 m1 p2 m2 = (m2 `shorterEq` m1) && match p1 p2 (finMask m2)
 
 
 intersectBM :: Prefix -> BitMap -> IntSet -> IntSet
@@ -524,8 +528,8 @@ intersectBM p1 bm1 (Tip p2 bm2 )
   | otherwise = Nil
 
 intersectBM p1 bm1 (Fin p2 m2)
-  | matchFin p1 p2 m2 = Tip p1 bm1
-  |      otherwise    = Nil
+  | match p1 p2 (finMask m2) = Tip p1 bm1
+  |          otherwise       = Nil
 
 intersectBM _  _    Nil        = Nil
 
