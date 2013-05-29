@@ -360,6 +360,12 @@ deleteBM !kx !bm = go
 
     go    Nil      = Nil
 
+{- Note that 'splitFin' always gives inconsistent intset.  Resulting
+tree doesn't hold Fin "buddy" or "Tip is never full" invariants.
+Therefore this function should be used only when we sure we delete at
+least one element from the tree later.
+-}
+
 splitFin :: Prefix -> Mask -> IntSet
 splitFin p m
   -- WARN here we have inconsistency - bitmap is full
@@ -542,6 +548,7 @@ intersections = L.foldl' intersection empty
 --------------------------------------------------------------------}
 
 -- Since difference is not commutative it's simpler to match all patterns
+-- See note for 'splitFin': we SHOULD _not_ split when this unnecessary.
 
 infixl 6 `difference`
 
@@ -590,19 +597,20 @@ difference t1@(Tip p1 _)       (Fin p2 m2 ) --
   |          otherwise         = Nil        --
 
 difference t1@(Tip _ _)         Nil            = t1
-difference t1@(Fin p1 m1)   t2@(Bin p2 m2 _ _)
-  | finMask m1 `shorter` m2
-  = if match p2 p1 (finMask m1)
-    then difference (splitFin p1 m1) t2
-    else t1
+difference t1@(Fin p1 m1)   t2@(Bin p2 m2 l r)
+    | finMask m1 `shorter` m2
+    = if match p2 p1 (finMask m1)
+      then difference (splitFin p1 m1) t2
+      else t1
 
-  | m2 `shorter` finMask m1
-  = if match p1 p2 m2
-    then difference (splitFin p1 m1) t2
-    else t1
-
-  | p1 == p2  = difference (splitFin p1 m1) t2
-  | otherwise = t1
+    | m2 `shorter` finMask m1 = down
+    | p1 == p2  = difference (splitFin p1 m1) t2
+    | otherwise = t1
+  where
+    down
+      | nomatch p1 p2 m2 = t1
+      |    zero p1 m2    = difference t1 l
+      |    otherwise     = difference t1 r
 
 difference t1@(Fin _ _)        (Tip p bm)      = deleteBM p bm t1
 difference t1@(Fin p1 m1)   t2@(Fin p2 m2)

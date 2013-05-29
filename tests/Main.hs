@@ -208,9 +208,7 @@ prop_differenceDeMorgan2 :: IntSet -> IntSet -> IntSet -> Bool
 prop_differenceDeMorgan2 a b c = a - (b + c) == (a - b) * (a - c)
 
 prop_differenceDistributive :: IntSet -> IntSet -> IntSet -> Bool
-prop_differenceDistributive a b c =
-     ((a `union` b) `difference` c)
-  == ((a `difference` c) `union` (b `difference` c))
+prop_differenceDistributive a b c = (a + b) - c == (a - c) + (b - c)
 
 
 main :: IO ()
