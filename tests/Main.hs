@@ -185,9 +185,6 @@ prop_minInSet s
   |  S.null s = True
   | otherwise = member (findMin s) s
 
--- TODO tests specialized for Fin
--- TODO tests for universy
-
 prop_differenceMember :: IntSet -> IntSet -> Bool
 prop_differenceMember a b = all (`notMember` difference a b) (toList b)
 
@@ -199,7 +196,6 @@ prop_differenceSize a b = size (difference a b) <= size a
 
 prop_differenceSubset :: IntSet -> IntSet -> Bool
 prop_differenceSubset = undefined
--- TODO implement subset
 
 prop_differenceDeMorgan1 :: IntSet -> IntSet -> IntSet -> Bool
 prop_differenceDeMorgan1 a b c = a - b * c == (a - b) + (a - c)
@@ -209,6 +205,7 @@ prop_differenceDeMorgan2 a b c = a - (b + c) == (a - b) * (a - c)
 
 prop_differenceDistributive :: IntSet -> IntSet -> IntSet -> Bool
 prop_differenceDistributive a b c = (a + b) - c == (a - c) + (b - c)
+
 
 
 main :: IO ()

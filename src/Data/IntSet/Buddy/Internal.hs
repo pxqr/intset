@@ -548,7 +548,7 @@ intersections = L.foldl' intersection empty
 --------------------------------------------------------------------}
 
 -- Since difference is not commutative it's simpler to match all patterns
--- See note for 'splitFin': we SHOULD _not_ split when this unnecessary.
+-- See note for 'splitFin': we _should not_ split when this unnecessary.
 
 infixl 6 `difference`
 

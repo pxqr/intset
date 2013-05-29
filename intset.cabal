@@ -21,18 +21,11 @@ description:
    long integer invervals like [0..2047] that just merged into one
    interval description. This allow to perform many operations in
    constant time and space. However if set contain sparse integers
-   like [1,12,7908,234,897] the same operations will take O(W, n)
+   like [1,12,7908,234,897] the same operations will take O(min(W, n))
    which is good enough in most cases.
 
-   TODO That is patricia tree?
-   TODO That does mean dense?
-   TODO How compaction is performed?
-
-   TODO When this data is good choice?
-   TODO When not?
-   TODO How this implementation relate to containers version?
-
--- TODO fix dependencies
+   In randomized settings this structure expected to be as fast as
+   Data.IntSet from containers.
 
 source-repository head
   type:                git
