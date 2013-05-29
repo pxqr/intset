@@ -1,0 +1,121 @@
+### Synopsis
+
+This package provides dense integer sets with buddy blocks coalescing.
+
+### Description
+
+> Persistent... is it trees?
+
+Yes, Radix trees. Trees are balanced by prefix bits, so we have fast
+merge operations, such as union, intersection and difference.  Chris
+Okasaki and Andrew Gill [shows][int-maps] that Patricia tree based
+integer maps might be order of magnitude faster than Red-Black tree
+counterparts on this operations. The same apply to integer sets, we
+just have keys, but don't have values.
+
+> That does mean the "dense"?
+
+That means we keep suffixes in bitmaps and we might pack, say 10,
+integers which lies close together in one bitmap. This optimization
+doesn't affect execution times for sparse sets, but makes dense sets
+much more memory efficient — near 10-50 times less space usage
+depending on machine word size and the actual density of the
+set. Basically, this let us be 3-4 times less memory efficient
+comparing with arrays of tightly packed bits, but see...
+
+> How suffix compaction is performed?
+
+There are exist a pretty simple algorithm used in memory allocators
+called ["buddy memory allocator"][buddy-alloc]. In a nutshell, we have
+a big block which is splitted by half when we remove from one of the
+half, and merge then back when we insert. It's somewhat inverse to the
+ordinary tree approach — in buddy tree we hold more information about
+elements that it _doesn't_ contain, while in prefix tree we hold more
+information about elements that it _does_ contain. It's easy to guess
+that we should do with it — take the two structures then fuse them
+into one to produce a new structure which perform _better_.
+
+Indeed, the key idea in the design is right here — we switch forth and
+back between representations per subtree basis. We intersperse
+different representations in different tree branches. It's like
+chameleon:
+
+* If the some subset is _sparse_, we just keep a radix tree with
+  bitmaps at leafs.
+
+* If the some subset becomes _full_ we turn it into block. If some
+  buddy block appears, we join the buddy blocks into one. And so forth.
+
+That is, we just get a structure that dynamically choose the optimal
+representation depending on _density_ of set. Moreover this lead to
+huge space savings:
+
+
+``` haskell
+> ppStats (fromList [0..123456])
+```
+
+gives:
+
+```
+Bin count: 6
+Tip count: 1
+Fin count: 6
+Size in bytes: 408
+Saved space over dense set:  123072
+Saved space over bytestring: 11879
+Percent saved over dense set:  99.6695821185617%
+Percent saved over bytestring: 96.67941727028567%
+```
+
+The `ppStats` is not an exposed function but you can play with it
+using `cabal-dev ghci`.
+
+I don't know if it is an old idea, but this works just fine.
+
+> So when this data structure is good choice?
+
+In many situation. It might be used as persistent and compact
+replacement for bool arrays or Data.IntSet with the following advantages:
+
+* Purity is extremely useful in multithreaded settings —
+  we could keep a set in a mutable transactional variable or an IORef
+  and atomically update/modify the set. So it could be used as
+  replacement for [TArray Int Bool][tarray] as well.
+* By merging intervals together we achieve compactness. In best case
+  some of main operations will take O(1) or O(lg(lg(n))) time and
+  space, so if you need interval set it's here.
+* Fast serizalization: if you are need conversion to/from bytestrings.
+  Because of bitmaps it's possible to do this conversion _extremely_ fast.
+
+> How this implementation relate to containers version?
+
+Heavely based. Essentially we just add the buddies compaction, but it
+turns out that some operations becomes more complicated and it
+requires much more effort to implement — in order to maintain the all
+tree invariants we need to take into account more cases. This is the
+reason why some operations are not implemented yet (e.g. lack of
+splits, views etc), but I hope I'll fix it with the time.
+
+### Documentation
+
+For documentation see haddock generated documentation.
+
+### Build Status
+
+[![Build Status][status-img]][status-link]
+
+### Maintainer
+
+This library is written and maintained by Sam T. <pxqr.sta@gmail.com>
+
+Feel free to report bugs and suggestions via
+[github issue tracker][issues] or the mail.
+
+[status-img]:  https://travis-ci.org/pxqr/intset.png
+[status-link]: https://travis-ci.org/pxqr/intset
+[issues]:      https://github.com/pxqr/intset/issues/new
+
+[int-maps]:    http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.37.5452
+[buddy-alloc]: http://en.wikipedia.org/wiki/Buddy_memory_allocation
+[tarray]:      http://hackage.haskell.org/packages/archive/stm/2.2.0.1/doc/html/Control-Concurrent-STM-TArray.html
