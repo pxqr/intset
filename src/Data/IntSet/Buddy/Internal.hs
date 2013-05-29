@@ -416,7 +416,7 @@ union    Nil           t         = t
 
 insertFin :: Prefix -> Mask -> IntSet -> IntSet
 insertFin p1 m1  t2@(Bin p2 m2 l r)
-    | ((m2 `shorter` m1) || m1 == m2) && match p1 p2 m2 =
+    | m2 `shorterEq` m1 && match p1 p2 m2 =
       if   zero p1 m2
       then binI p2 m2 (insertFin p1 m1 l) r
       else binI p2 m2 l (insertFin p1 m1 r)
@@ -490,7 +490,7 @@ intersection    Nil             _            = Nil
 
 intersectFin :: Prefix -> Mask -> IntSet -> IntSet
 intersectFin p1 m1 t@(Bin p2 m2 l r)
-  | (m2 `shorter` m1) || m1 == m2 && match p1 p2 m2
+  | m2 `shorterEq` m1 && match p1 p2 m2
   = if zero p1 m2
     then intersectFin p1 m1 l
     else intersectFin p1 m1 r
@@ -545,7 +545,7 @@ intersections = L.foldl' intersection empty
 
 infixl 6 `difference`
 
--- | /O(n + m)/. Find difference of the two sets.
+-- | /O(n + m)/ or /O(1)/. Find difference of the two sets.
 difference :: IntSet -> IntSet -> IntSet
 difference t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
     | m1 `shorter` m2 = leftiest
@@ -564,9 +564,19 @@ difference t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
       |     otherwise    = difference t1 r2
 
 difference t1@(Bin _ _ _ _)      (Tip p bm)    = deleteBM p bm t1
-difference t1@(Bin p1 _ _ _)     (Fin p2 m2)
-  | match p1 p2 (finMask m2) = Nil
-  |        otherwise         = difference t1 (splitFin p2 m2)
+difference t1@(Bin p1 m1 _ _)    (Fin p2 m2)
+    | m1 `shorter` finMask m2
+    = if match p2 p1 m1
+      then difference t1 (splitFin p2 m2)
+      else t1
+
+    | finMask m2 `shorter` m1
+    = if match p1 p2 (finMask m2)
+      then Nil
+      else t1
+
+    | p1 == p2  = Nil
+    | otherwise = t1
 
 difference t1@(Bin _ _ _ _)     Nil            = t1
 difference t1@(Tip p _ )       (Bin p2 m2 l r)
@@ -580,15 +590,33 @@ difference t1@(Tip p1 _)       (Fin p2 m2 ) --
   |          otherwise         = Nil        --
 
 difference t1@(Tip _ _)         Nil            = t1
-difference t1@(Fin p1 m1)   t2@(Bin p2 _ _ _)
-  | match p2 p1 (finMask m1) = difference (splitFin p1 m1) t2
-  |         otherwise        = t1
+difference t1@(Fin p1 m1)   t2@(Bin p2 m2 _ _)
+  | finMask m1 `shorter` m2
+  = if match p2 p1 (finMask m1)
+    then difference (splitFin p1 m1) t2
+    else t1
+
+  | m2 `shorter` finMask m1
+  = if match p1 p2 m2
+    then difference (splitFin p1 m1) t2
+    else t1
+
+  | p1 == p2  = difference (splitFin p1 m1) t2
+  | otherwise = t1
 
 difference t1@(Fin _ _)        (Tip p bm)      = deleteBM p bm t1
-difference t1@(Fin p1 m1)     t2@(Fin p2 m2)
-  | m1 `shorter` m2 = undefined --difference (splitFin p1 m1) t2
-  | m2 `shorter` m1 = undefined
-  |    p1 == p2     = Nil
+difference t1@(Fin p1 m1)   t2@(Fin p2 m2)
+  | m1 `shorter` m2
+  = if match p2 p1 (finMask m1)
+    then difference (splitFin p1 m1) t2
+    else t1
+
+  | m2 `shorter` m1 =
+    if match p1 p2 (finMask m2)
+    then Nil
+    else t1
+
+  |     p1 == p2    = Nil
   |    otherwise    = t1
 
 difference t1@(Fin _ _)         Nil            = t1
