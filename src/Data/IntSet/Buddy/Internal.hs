@@ -48,7 +48,7 @@ module Data.IntSet.Buddy.Internal
        , Data.IntSet.Buddy.Internal.filter
 
          -- * Splits
-       , split, splitUp, splitDown
+       , split, splitGT, splitLT
 
          -- * Min/Max
        , findMin, findMax
@@ -644,18 +644,22 @@ difference     Nil              _              = Nil
 split :: Key -> IntSet -> (IntSet, IntSet)
 split !k = splitBM (prefixOf k) (bitmapOf k)
 
-splitUp :: Key -> IntSet -> IntSet
-splitUp !x = fst . split x
+splitGT :: Key -> IntSet -> IntSet
+splitGT !x = fst . split x
 
-splitDown :: Key -> IntSet -> IntSet
-splitDown !x = snd . split x
-
-splitBy :: Key -> IntSet -> (IntSet, IntSet)
-splitBy = undefined
+splitLT :: Key -> IntSet -> IntSet
+splitLT !x = snd . split x
 
 splitBM :: Prefix -> BitMap -> IntSet -> (IntSet, IntSet)
-splitBM !px !tbm = go
+splitBM !px !tbm = root
   where
+    root t@(Bin _ m l r)
+      |  m  >= 0  = go t
+        -- in last two clauses we have {l = positive} and {r = negative}
+      |  px >= 0  = let (posLT, posGT) = go l in (r `union` posLT, posGT)
+      | otherwise = let (negLT, negGT) = go r in (negLT, negGT `union` l)
+    root t = go t
+
     go t@(Bin p m l r)
         | nomatch px p m = if p < px then (t, Nil) else (Nil, t)
         |    zero px m   = let (ll, lr) = go l in (ll, lr `union` r)
