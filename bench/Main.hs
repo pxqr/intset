@@ -46,7 +46,7 @@ fromByteString = S.fromDistinctAscList . indices 0 . B.unpack
     bits i = L.map (testBit i) [0..bitSize (0 :: Word8) - 1]
 
 main :: IO ()
-main = defaultMain
+main = defaultMain $
   [ bench "fromList/O-2500"  $ nf S.fromList [0..2500]
   , bench "fromList/O-5000"  $ nf S.fromList [0..5000]
   , bench "fromList/O-10000" $ nf S.fromList [0..10000]
@@ -83,25 +83,48 @@ main = defaultMain
   , let !s = SB.fromList [0..1000000] in
     bench "member/1000000" $ nf (L.all (`SB.member` s)) [50000..100000]
 
-    {- union -}
-  , let (!a, !b) = (S.fromList [0,64..10000 * 64], S.fromList [1,65..10000 * 64]) in
-    bench "union/O-10000-sparse"  $ whnf (uncurry S.union) (a, b)
 
-  , let (!a, !b) = (SB.fromList [0,64..10000 * 64], SB.fromList [1,65..10000 * 64]) in
-    bench "union/S-10000-sparse" $ whnf (uncurry SB.union) (a, b)
-
-  , let (!a, !b) = (S.fromList [0,2..500000 * 2], S.fromList [1,3..500000 * 2]) in
-    bench "union/O-500000-dense"  $ whnf (uncurry S.union) (a, b)
-
-  , let (!a, !b) = (SB.fromList [0,2..500000 * 2], SB.fromList [1,3..500000 * 2]) in
-    bench "union/S-500000-dense" $ whnf (uncurry SB.union) (a, b)
-
-  , let (!a, !b) = (S.fromList [0..500000], S.fromList [0..500000]) in
-    bench "union/O-500000-buddy"  $ whnf (uncurry S.union) (a, b)
-
-  , let (!a, !b) = (SB.fromList [0..500000], SB.fromList [0..500000]) in
-    bench "union/S-500000-buddy" $ whnf (uncurry SB.union) (a, b)
 
 --  , bench "distinct/100000/O" $ nf S.fromDistinctAscList  [1..100000]
 --  , bench "distinct/20000/S"  $ nf SB.fromDistinctAscList [1..20000]
+  ] ++ concat
+  [ mergeTempl S.union        SB.union        "union"
+  , mergeTempl S.intersection SB.intersection "intersection"
+  , mergeTempl S.difference   SB.difference   "difference"
+  ]
+
+
+mergeTempl :: (S.IntSet  -> S.IntSet  -> S.IntSet)
+           -> (SB.IntSet -> SB.IntSet -> SB.IntSet)
+           -> String -> [Benchmark]
+mergeTempl sop bop n =
+  [ let (!a, !b) = (S.fromList [0,64..10000 * 64], S.fromList [1,65..10000 * 64]) in
+    bench (n ++"/O-10000-sparse-disjoint")  $ whnf (uncurry sop) (a, b)
+
+  , let (!a, !b) = (S.fromList [0,64..10000 * 64], S.fromList [0,64..10000 * 64]) in
+    bench (n ++"/O-10000-sparse-overlap")  $ whnf (uncurry sop) (a, b)
+
+  , let (!a, !b) = (SB.fromList [0,64..10000 * 64], SB.fromList [1,65..10000 * 64]) in
+    bench (n ++ "/S-10000-sparse-disjoint") $ whnf (uncurry bop) (a, b)
+
+  , let (!a, !b) = (SB.fromList [0,64..10000 * 64], SB.fromList [0,64..10000 * 64]) in
+    bench (n ++ "/S-10000-sparse-overlap") $ whnf (uncurry bop) (a, b)
+
+  , let (!a, !b) = (S.fromList [0,2..500000 * 2], S.fromList [1,3..500000 * 2]) in
+    bench (n ++ "/O-500000-dense-disjoint")  $ whnf (uncurry sop) (a, b)
+
+  , let (!a, !b) = (S.fromList [0,2..500000 * 2], S.fromList [0,2..500000 * 2]) in
+    bench (n ++ "/O-500000-dense-overlap")  $ whnf (uncurry sop) (a, b)
+
+  , let (!a, !b) = (SB.fromList [0,2..500000 * 2], SB.fromList [1,3..500000 * 2]) in
+    bench (n ++ "/S-500000-dense-disjoint") $ whnf (uncurry bop) (a, b)
+
+  , let (!a, !b) = (SB.fromList [0,2..500000 * 2], SB.fromList [0,2..500000 * 2]) in
+    bench (n ++ "/S-500000-dense-overlap") $ whnf (uncurry bop) (a, b)
+
+  , let (!a, !b) = (S.fromList [0..500000], S.fromList [0..500000]) in
+    bench (n ++ "/O-500000-buddy")  $ whnf (uncurry sop) (a, b)
+
+  , let (!a, !b) = (SB.fromList [0..500000], SB.fromList [0..500000]) in
+    bench (n ++ "/S-500000-buddy") $ whnf (uncurry bop) (a, b)
   ]
