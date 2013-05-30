@@ -110,30 +110,36 @@ type Gen a = Int -> a
 
 genericBench :: Name -> Gen S.IntSet -> Gen SB.IntSet -> Template
 genericBench _type genA genB name n f g =
-  [ let !s = genA n in bench (name ++ "/O-" ++ show n ++ _type) $ whnf f s
-  , let !s = genB n in bench (name ++ "/S-" ++ show n ++ _type) $ whnf g s
+  [ let !s = genA n in bench (name ++ "/O-" ++ show n ++ "-" ++ _type) $ whnf f s
+  , let !s = genB n in bench (name ++ "/S-" ++ show n ++ "-" ++ _type) $ whnf g s
   ]
 
-sparseSB :: Int -> SB.IntSet
+sparseSB :: Gen SB.IntSet
 sparseSB n = SB.fromList [0, 64..n * 64 ]
 
-sparseS :: Int -> S.IntSet
+sparseS :: Gen S.IntSet
 sparseS n = S.fromDistinctAscList [0, 64..n * 64 ]
+
+denseSB :: Gen SB.IntSet
+denseSB n = SB.fromList [0, 2 .. n * 2]
+
+denseS :: Gen S.IntSet
+denseS n = S.fromDistinctAscList [0, 2 .. n * 2]
+
+intervalS :: Gen S.IntSet
+intervalS n = S.fromDistinctAscList [0..n]
+
+intervalSB :: Gen SB.IntSet
+intervalSB n = SB.fromList [0..n]
 
 sparseBench :: Template
 sparseBench = genericBench "sparse" sparseS sparseSB
-
-denseSB :: Int -> SB.IntSet
-denseSB n = SB.fromList [0, 2 .. n * 2]
-
-denseS :: Int -> S.IntSet
-denseS n = S.fromDistinctAscList [0, 2 .. n * 2]
 
 denseBench :: Template
 denseBench = genericBench "dense" denseS denseSB
 
 intervalBench :: Template
-intervalBench = undefined
+intervalBench = genericBench "interval" intervalS intervalSB
 
 complexBench :: Template
 complexBench name n f g = L.concatMap (\t -> t name n f g) templs
