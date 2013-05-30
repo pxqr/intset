@@ -1,5 +1,23 @@
--- TODO document benchmarks
-
+-- |
+--   Copyright   :  (c) Sam T. 2013
+--   License     :  BSD3
+--   Maintainer  :  pxqr.sta@gmail.com
+--   Stability   :  experimental
+--   Portability :  portable
+--
+--   Each function should be benchmarked at least in the following modes:
+--
+--     * sparse — to see worst case performance. Taking into account
+--     both implementations I think [0,64..N] is pretty sparse.
+--
+--     * dense — to see expected performance. Again [0,2..N] is pretty
+--     dense but not interval yet.
+--
+--     * interval — to see best case performance. Set should be one
+--     single interval like [0..N].
+--
+--   This should help us unify benchmarks and make it more infomative.
+--
 {-# LANGUAGE BangPatterns #-}
 module Main (main) where
 
@@ -65,18 +83,24 @@ main = defaultMain
   , let !s = SB.fromList [0..1000000] in
     bench "member/1000000" $ nf (L.all (`SB.member` s)) [50000..100000]
 
-  , let (!a, !b) = (S.fromList [0,2..10000], S.fromList [1,3..10000]) in
-    bench "union/O-5000-sparse"  $ whnf (uncurry S.union) (a, b)
+    {- union -}
+  , let (!a, !b) = (S.fromList [0,64..10000 * 64], S.fromList [1,65..10000 * 64]) in
+    bench "union/O-10000-sparse"  $ whnf (uncurry S.union) (a, b)
 
-  , let (!a, !b) = (SB.fromList [0,2..10000], SB.fromList [1,3..10000]) in
-    bench "union/S-5000-sparse" $ whnf (uncurry SB.union) (a, b)
+  , let (!a, !b) = (SB.fromList [0,64..10000 * 64], SB.fromList [1,65..10000 * 64]) in
+    bench "union/S-10000-sparse" $ whnf (uncurry SB.union) (a, b)
 
-  , let (!a, !b) = (S.fromList [0..5000], S.fromList [0..5000]) in
-    bench "union/O-5000-dense"  $ whnf (uncurry S.union) (a, b)
+  , let (!a, !b) = (S.fromList [0,2..500000 * 2], S.fromList [1,3..500000 * 2]) in
+    bench "union/O-500000-dense"  $ whnf (uncurry S.union) (a, b)
 
-  , let (!a, !b) = (SB.fromList [0..5000], SB.fromList [0..5000]) in
-    bench "union/S-5000-dense" $ whnf (uncurry SB.union) (a, b)
+  , let (!a, !b) = (SB.fromList [0,2..500000 * 2], SB.fromList [1,3..500000 * 2]) in
+    bench "union/S-500000-dense" $ whnf (uncurry SB.union) (a, b)
 
+  , let (!a, !b) = (S.fromList [0..500000], S.fromList [0..500000]) in
+    bench "union/O-500000-buddy"  $ whnf (uncurry S.union) (a, b)
+
+  , let (!a, !b) = (SB.fromList [0..500000], SB.fromList [0..500000]) in
+    bench "union/S-500000-buddy" $ whnf (uncurry SB.union) (a, b)
 
 --  , bench "distinct/100000/O" $ nf S.fromDistinctAscList  [1..100000]
 --  , bench "distinct/20000/S"  $ nf SB.fromDistinctAscList [1..20000]
