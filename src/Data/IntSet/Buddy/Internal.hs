@@ -638,47 +638,68 @@ difference t1@(Fin _ _)         Nil            = t1
 difference     Nil              _              = Nil
 
 {--------------------------------------------------------------------
+  Strict Pair
+--------------------------------------------------------------------}
+
+{- we use strict pair because almost all operations on intsets are
+   strict in almost all its arguments; so there is no reason to keep
+   result of split lazy;
+
+   moreover this gives near 2 times performance improvements
+-}
+
+data SPair a b = !a :*: !b
+
+unStrict :: SPair a b -> (a, b)
+unStrict (a :*: b) = (a, b)
+
+{--------------------------------------------------------------------
   Splits
 --------------------------------------------------------------------}
 
+-- TODO docs
 split :: Key -> IntSet -> (IntSet, IntSet)
-split !k = splitBM (prefixOf k) (bitmapOf k)
+split !k = unStrict . splitBM (prefixOf k) (bitmapOf k)
 
+-- TODO specialize
 splitGT :: Key -> IntSet -> IntSet
 splitGT !x = fst . split x
+{-# INLINE splitGT #-}
 
+-- TODO specialize
 splitLT :: Key -> IntSet -> IntSet
 splitLT !x = snd . split x
+{-# INLINE splitLT #-}
 
-splitBM :: Prefix -> BitMap -> IntSet -> (IntSet, IntSet)
+splitBM :: Prefix -> BitMap -> IntSet -> SPair IntSet IntSet
 splitBM !px !tbm = root
   where
     root t@(Bin _ m l r)
       |  m  >= 0  = go t
         -- in last two clauses we have {l = positive} and {r = negative}
-      |  px >= 0  = let (posLT, posGT) = go l in (r `union` posLT, posGT)
-      | otherwise = let (negLT, negGT) = go r in (negLT, negGT `union` l)
+      |  px >= 0  = let posLT :*: posGT = go l in (r `union` posLT) :*: posGT
+      | otherwise = let negLT :*: negGT = go r in negLT :*: (negGT `union` l)
     root t = go t
 
     go t@(Bin p m l r)
-        | nomatch px p m = if p < px then (t, Nil) else (Nil, t)
-        |    zero px m   = let (ll, lr) = go l in (ll, lr `union` r)
-        |    otherwise   = let (rl, rr) = go r in (l `union` rl, rr)
+        | nomatch px p m = if p < px then t :*: Nil else Nil :*: t
+        |    zero px m   = let ll :*: lr = go l in ll :*: (lr `union` r)
+        |    otherwise   = let rl :*: rr = go r in (l `union` rl) :*: rr
 
     go t@(Tip p bm)
-        |     px < p = (Nil, t  )
-        | p < px     = (t,   Nil)
-        |  otherwise = (tipD px (bm .&. lowBM), tipD px (bm .&. hghBM))
+        |     px < p = Nil :*: t
+        | p < px     = t   :*: Nil
+        |  otherwise = tipD px (bm .&. lowBM) :*: tipD px (bm .&. hghBM)
       where
         lowBM = tbm - 1
         hghBM = Bits.complement (lowBM + tbm)
 
     go t@(Fin p m )
         | match px p (finMask m) = go (splitFin p m)
-        |       p < px           = (t, Nil)
-        |        otherwise       = (Nil, t)         -- | px < p
+        |       p < px           = t   :*: Nil
+        |        otherwise       = Nil :*: t         -- | px < p
 
-    go  Nil          = (Nil, Nil)
+    go  Nil          = Nil :*: Nil
 
 {--------------------------------------------------------------------
   Min/max
