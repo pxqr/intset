@@ -60,7 +60,12 @@ test-suite properties
 
   ghc-options:         -Wall
 
-
+test-suite fusion
+  type:                exitcode-stdio-1.0
+  main-is:             Fusion.hs
+  hs-source-dirs:      tests
+  build-depends:       base == 4.*, intset
+  ghc-options:         -Wall -ddump-simpl-stats
 
 benchmark benchmarks
   type:                exitcode-stdio-1.0

@@ -751,8 +751,32 @@ findMaxBM = error "findMaxBM"  --fromIntegral . leadingZeros
 {-# INLINE findMaxBM #-}
 
 {--------------------------------------------------------------------
+   Conversion Fusion
+--------------------------------------------------------------------}
+
+stream :: IntSet -> [Key]
+stream = toList
+{-# NOINLINE stream #-}
+
+unstream :: [Key] -> IntSet
+unstream = fromList
+{-# NOINLINE unstream #-}
+
+{-# RULES
+  "IntSet/stream/unstream"  [~3] forall x. stream (unstream x) = x;
+  "IntSet/unstream/stream"  [~3] forall x. unstream (stream x) = x;
+  "IntSet/stream/fromList"  [ 3] forall x. stream (fromList x) = x;
+  "IntSet/unstream/toList"  [ 3] forall x. toList (unstream x) = x
+  #-}
+
+{--------------------------------------------------------------------
    Map/fold/filter
 --------------------------------------------------------------------}
+
+{-# RULES
+  "IntSet/map/id" Data.IntSet.Buddy.Internal.map id = id
+  #-}
+
 -- TODO fusion
 -- | /O(n * min(W, n))/.
 --   Apply the function to each element of the set.
@@ -761,11 +785,8 @@ findMaxBM = error "findMaxBM"  --fromIntegral . leadingZeros
 --   'negatives' sets.
 --
 map :: (Key -> Key) -> IntSet -> IntSet
-map f = fromList . L.map f . toList
+map f = unstream . L.map f . stream
 {-# INLINE map #-}
-
-listFin :: Prefix -> Mask -> [Key]
-listFin p m = [p..(p + m) - 1]
 
 -- | /O(n)/.  Fold the element using the given right associative
 --   binary operator.
@@ -796,19 +817,31 @@ filter f = go
     go (Fin p m)  = fromList $ L.filter f $ listFin p m -- FIX fromDistinctAscList
     go  Nil       = Nil
 
+listFin :: Prefix -> Mask -> [Key]
+listFin p m = [p..(p + m) - 1]
+
 {--------------------------------------------------------------------
   List conversions
 --------------------------------------------------------------------}
+
+{-# RULES
+  "IntSet/toList/fromList"      forall x. fromList (toList x) = x;
+  "IntSet/toList/fromList/comp"           fromList . toList   = id;
+  "IntSet/fromList/toList"      forall x. toList (fromList x) = x;
+  "IntSet/fromList/toList/comp"           toList . fromList   = id
+  #-}
 
 -- | /O(n * min(W, n))/ or /O(n)/.
 --  Create a set from a list of its elements.
 --
 fromList :: [Key] -> IntSet
 fromList = L.foldl' (flip insert) empty
+{-# NOINLINE [3] fromList #-}
 
 -- | /O(n)/. Convert the set to a list of its elements.
 toList :: IntSet -> [Key]
 toList = Data.IntSet.Buddy.Internal.foldr (:) []
+{-# NOINLINE [3] toList #-}
 
 -- | 'elems' is alias to 'toList' for compatibility.
 elems :: IntSet -> [Key]
