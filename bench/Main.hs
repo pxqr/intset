@@ -71,9 +71,6 @@ main = defaultMain $
   , let !bs = B.replicate 1048576 255 in
     bench "fromByteString/8M-S-dense" $ whnf SB.fromByteString bs
 
---  , let !bs = B.replicate 1048576 85 in
---    bench "fromByteString/8M-S-sparse" $ whnf SB.fromByteString bs
-
   , let !bs = B.replicate 1048576 0 in
     bench "fromByteString/8M-S-empty" $ whnf SB.fromByteString bs
 
@@ -82,30 +79,66 @@ main = defaultMain $
 
   , let !s = SB.fromList [0..1000000] in
     bench "member/1M" $ nf (L.all (`SB.member` s)) [50000..100000]
-
-  , let !s = S.fromDistinctAscList [0,64..1000000 * 64 ] in
-    bench "split/O-1M-10K-sparse" $
-      whnf (flip (L.foldr ((snd .) . S.split)) [100,200..1000000]) s
-
-  , let !s = SB.fromList [0,64..1000000 * 64 ] in
-    bench "split/S-1M-10K-sparse" $
-      whnf (flip (L.foldr ((snd .) . SB.split)) [100,200..1000000]) s
-
-  , let !s = S.fromDistinctAscList [0..1000000] in
-    bench "split/O-1M-10K-buddy" $
-      whnf (flip (L.foldr ((snd .) . S.split)) [100,200..1000000]) s
-
-  , let !s = SB.fromList [0..1000000] in
-    bench "split/S-1M-10K-buddy" $
-      whnf (flip (L.foldr ((snd .) . SB.split)) [100,200..1000000]) s
-
---  , bench "distinct/100000/O" $ nf S.fromDistinctAscList  [1..100000]
---  , bench "distinct/20000/S"  $ nf SB.fromDistinctAscList [1..20000]
-  ] ++ concat
-  [ mergeTempl S.union        SB.union        "union"
+  ]
+  ++ concat
+  [ splitBenchs
+  , mergeTempl S.union        SB.union        "union"
   , mergeTempl S.intersection SB.intersection "intersection"
   , mergeTempl S.difference   SB.difference   "difference"
   ]
+
+
+splitBenchs :: [Benchmark]
+splitBenchs = complexBench "split" 1000000 (chunk S.split) (chunk SB.split)
+  where
+    chunk op s = L.foldr ((snd .) . op) s points
+    points     = [100,200..1000000]
+
+{--------------------------------------------------------------------
+  Benchmark Templates
+--------------------------------------------------------------------}
+
+type Name = String
+
+type Template =   Name  -- name of benchmark
+              ->  Int   -- size of int set
+              -> (S.IntSet -> S.IntSet)
+              -> (SB.IntSet -> SB.IntSet)
+              -> [Benchmark]
+
+type Gen a = Int -> a
+
+genericBench :: Name -> Gen S.IntSet -> Gen SB.IntSet -> Template
+genericBench _type genA genB name n f g =
+  [ let !s = genA n in bench (name ++ "/O-" ++ show n ++ _type) $ whnf f s
+  , let !s = genB n in bench (name ++ "/S-" ++ show n ++ _type) $ whnf g s
+  ]
+
+sparseSB :: Int -> SB.IntSet
+sparseSB n = SB.fromList [0, 64..n * 64 ]
+
+sparseS :: Int -> S.IntSet
+sparseS n = S.fromDistinctAscList [0, 64..n * 64 ]
+
+sparseBench :: Template
+sparseBench = genericBench "sparse" sparseS sparseSB
+
+denseSB :: Int -> SB.IntSet
+denseSB n = SB.fromList [0, 2 .. n * 2]
+
+denseS :: Int -> S.IntSet
+denseS n = S.fromDistinctAscList [0, 2 .. n * 2]
+
+denseBench :: Template
+denseBench = genericBench "dense" denseS denseSB
+
+intervalBench :: Template
+intervalBench = undefined
+
+complexBench :: Template
+complexBench name n f g = L.concatMap (\t -> t name n f g) templs
+  where
+    templs = [sparseBench, denseBench, intervalBench]
 
 
 mergeTempl :: (S.IntSet  -> S.IntSet  -> S.IntSet)
