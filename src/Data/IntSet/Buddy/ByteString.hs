@@ -11,8 +11,11 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Data.IntSet.Buddy.ByteString
-       (
-         fromByteString, toByteString
+       ( fromByteString
+       , toByteString, toLazyByteString
+
+         -- * Extra
+       , toBuilder
        ) where
 
 import Data.Bits
@@ -30,8 +33,10 @@ import Data.IntSet.Buddy.Internal
 {-
   it seems like we have this conversion hella fast by desing
   e.g. read by blocks(bitmaps), fast merge, fast 'bin'
-  but we need to make memory access patterns linear
 
+  but we need to make memory access patterns linear and dense
+  e.g. read left subtree /before/ right subtree;
+  TODO carefully force this behaviour
 -}
 
 fromByteString :: ByteString -> IntSet

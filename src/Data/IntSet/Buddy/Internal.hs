@@ -47,6 +47,9 @@ module Data.IntSet.Buddy.Internal
        , Data.IntSet.Buddy.Internal.foldr
        , Data.IntSet.Buddy.Internal.filter
 
+         -- * Splits
+       , split, splitUp, splitDown
+
          -- * Min/Max
        , findMin, findMax
 
@@ -381,6 +384,10 @@ complement :: IntSet -> IntSet
 complement Nil = universe
 complement _   = error "complement: not implemented"
 
+-- TODO
+interval :: Key -> Key -> IntSet
+interval = undefined
+
 {--------------------------------------------------------------------
   Combine
 --------------------------------------------------------------------}
@@ -629,6 +636,45 @@ difference t1@(Fin p1 m1)   t2@(Fin p2 m2)
 
 difference t1@(Fin _ _)         Nil            = t1
 difference     Nil              _              = Nil
+
+{--------------------------------------------------------------------
+  Splits
+--------------------------------------------------------------------}
+
+split :: Key -> IntSet -> (IntSet, IntSet)
+split !k = splitBM (prefixOf k) (bitmapOf k)
+
+splitUp :: Key -> IntSet -> IntSet
+splitUp !x = fst . split x
+
+splitDown :: Key -> IntSet -> IntSet
+splitDown !x = snd . split x
+
+splitBy :: Key -> IntSet -> (IntSet, IntSet)
+splitBy = undefined
+
+splitBM :: Prefix -> BitMap -> IntSet -> (IntSet, IntSet)
+splitBM !px !tbm = go
+  where
+    go t@(Bin p m l r)
+        | nomatch px p m = if p < px then (t, Nil) else (Nil, t)
+        |    zero px m   = let (ll, lr) = go l in (ll, lr `union` r)
+        |    otherwise   = let (rl, rr) = go r in (l `union` rl, rr)
+
+    go t@(Tip p bm)
+        |     px < p = (Nil, t  )
+        | p < px     = (t,   Nil)
+        |  otherwise = (tipD px (bm .&. lowBM), tipD px (bm .&. hghBM))
+      where
+        lowBM = tbm - 1
+        hghBM = Bits.complement (lowBM + tbm)
+
+    go t@(Fin p m )
+        | match px p (finMask m) = go (splitFin p m)
+        |       p < px           = (t, Nil)
+        |        otherwise       = (Nil, t)         -- | px < p
+
+    go  Nil          = (Nil, Nil)
 
 {--------------------------------------------------------------------
   Min/max
