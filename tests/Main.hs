@@ -206,7 +206,10 @@ prop_differenceDeMorgan2 a b c = a - (b + c) == (a - b) * (a - c)
 prop_differenceDistributive :: IntSet -> IntSet -> IntSet -> Bool
 prop_differenceDistributive a b c = (a + b) - c == (a - c) + (b - c)
 
-
+prop_splitPivot :: IntSet -> Key -> Bool
+prop_splitPivot s k = all (< k) (toList lt) && all (k <) (toList gt)
+  where
+    (lt, gt) = split k s
 
 main :: IO ()
 main = defaultMain
@@ -267,6 +270,9 @@ main = defaultMain
   , testProperty "difference de morgan1"     prop_differenceDeMorgan1
   , testProperty "difference de morgan2"     prop_differenceDeMorgan2
   , testProperty "difference distributive"   prop_differenceDistributive
+
+  , testProperty "split pivot"               prop_splitPivot
+
 
   , testProperty "min"                  prop_min
   , testProperty "valid"                prop_valid

@@ -83,7 +83,21 @@ main = defaultMain $
   , let !s = SB.fromList [0..1000000] in
     bench "member/1000000" $ nf (L.all (`SB.member` s)) [50000..100000]
 
+  , let !s = S.fromDistinctAscList [0,64..1000000 * 64 ] in
+    bench "split/O-1M-10K-sparse" $
+      whnf (flip (L.foldr ((snd .) . S.split)) [100,200..1000000]) s
 
+  , let !s = SB.fromList [0,64..1000000 * 64 ] in
+    bench "split/S-1M-10K-sparse" $
+      whnf (flip (L.foldr ((snd .) . SB.split)) [100,200..1000000]) s
+
+  , let !s = S.fromDistinctAscList [0..1000000] in
+    bench "split/O-1M-10K-buddy" $
+      whnf (flip (L.foldr ((snd .) . S.split)) [100,200..1000000]) s
+
+  , let !s = SB.fromList [0..1000000] in
+    bench "split/S-1M-10K-buddy" $
+      whnf (flip (L.foldr ((snd .) . SB.split)) [100,200..1000000]) s
 
 --  , bench "distinct/100000/O" $ nf S.fromDistinctAscList  [1..100000]
 --  , bench "distinct/20000/S"  $ nf SB.fromDistinctAscList [1..20000]

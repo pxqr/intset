@@ -75,6 +75,9 @@ module Data.IntSet.Buddy
        , SB.foldr
        , SB.filter
 
+         -- * Splits
+       , split, splitGT, splitLT
+
          -- * Min/Max
        , findMin, findMax
 
