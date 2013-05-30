@@ -1,3 +1,5 @@
+-- TODO document benchmarks
+
 {-# LANGUAGE BangPatterns #-}
 module Main (main) where
 
@@ -62,6 +64,19 @@ main = defaultMain
 
   , let !s = SB.fromList [0..1000000] in
     bench "member/1000000" $ nf (L.all (`SB.member` s)) [50000..100000]
+
+  , let (!a, !b) = (S.fromList [0,2..10000], S.fromList [1,3..10000]) in
+    bench "union/O-5000-sparse"  $ whnf (uncurry S.union) (a, b)
+
+  , let (!a, !b) = (SB.fromList [0,2..10000], SB.fromList [1,3..10000]) in
+    bench "union/S-5000-sparse" $ whnf (uncurry SB.union) (a, b)
+
+  , let (!a, !b) = (S.fromList [0..5000], S.fromList [0..5000]) in
+    bench "union/O-5000-dense"  $ whnf (uncurry S.union) (a, b)
+
+  , let (!a, !b) = (SB.fromList [0..5000], SB.fromList [0..5000]) in
+    bench "union/S-5000-dense" $ whnf (uncurry SB.union) (a, b)
+
 
 --  , bench "distinct/100000/O" $ nf S.fromDistinctAscList  [1..100000]
 --  , bench "distinct/20000/S"  $ nf SB.fromDistinctAscList [1..20000]
