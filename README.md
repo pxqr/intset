@@ -1,6 +1,6 @@
 ### Synopsis
 
-This package provides dense integer sets with buddy blocks coalescing.
+This package provides efficient integer interval sets.
 
 ### Description
 
@@ -47,8 +47,8 @@ chameleon:
   buddy block appears, we join the buddy blocks into one. And so forth.
 
 That is, we just get a structure that dynamically choose the optimal
-representation depending on _density_ of set. Moreover this lead to
-huge space savings:
+representation depending on _density_ of set. Moreover in best case
+this lead to huge space savings:
 
 
 ``` haskell
@@ -83,19 +83,19 @@ replacement for bool arrays or Data.IntSet with the following advantages:
   and atomically update/modify the set. So it could be used as
   replacement for [TArray Int Bool][tarray] as well.
 * By merging intervals together we achieve compactness. In best case
-  some of main operations will take O(1) or O(lg(lg(n))) time and
-  space, so if you need interval set it's here.
+  some of main operations will take O(1)time and space, so if you need
+  interval set it's here.
 * Fast serizalization: if you are need conversion to/from bytestrings.
   Because of bitmaps it's possible to do this conversion _extremely_ fast.
 
 > How this implementation relate to containers version?
 
-Heavely based. Essentially we just add the buddies compaction, but it
-turns out that some operations becomes more complicated and it
+Heavely based. Essentially we just add the buddy interval compaction,
+but it turns out that some operations becomes more complicated and
 requires much more effort to implement — in order to maintain the all
 tree invariants we need to take into account more cases. This is the
 reason why some operations are not implemented yet (e.g. lack of
-splits, views etc), but I hope I'll fix it with the time.
+views), but I hope I'll fix it with the time.
 
 ### Documentation
 
