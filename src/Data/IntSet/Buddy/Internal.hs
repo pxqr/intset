@@ -673,6 +673,9 @@ unStrict (a :*: b) = (a, b)
 --
 -- > split 5 (fromList [0..10]) == (fromList [0..4], fromList [6..10])
 --
+--   Performance note: if need only lesser or greater keys, use
+--   splitLT or splitGT respectively.
+--
 split :: Key -> IntSet -> (IntSet, IntSet)
 split !k = unStrict . splitBM (prefixOf k) (bitmapOf k)
 
@@ -744,9 +747,35 @@ splitBMGT !px !tbm = root
 -- | /O(min(W, n)/. Takes subset such that each element is less
 -- than the specified key. The exact key is excluded from result.
 splitLT :: Key -> IntSet -> IntSet
-splitLT !x = snd . split x
-{-# INLINE splitLT #-}
+splitLT !x = splitBMLT (prefixOf x) (bitmapOf x)
 
+splitBMLT :: Prefix -> BitMap -> IntSet -> IntSet
+splitBMLT !px !tbm = root
+  where
+    root t@(Bin _ m l r)
+        |  m  >= 0  = go t
+        |  px >= 0  = r `union` go l
+        | otherwise = go r
+    root t = go t
+
+    go t@(Bin p m l r)
+        | nomatch px p m = if p < px then t else Nil
+        |   zero px m    = go l
+        |   otherwise    = l `union` go r
+
+    go t@(Tip p bm)
+        |     px < p = Nil
+        | p < px     = t
+        |  otherwise = tipD px (bm .&. lowBM)
+      where
+        lowBM = tbm - 1
+
+    go t@(Fin p m)
+        | match px p (finMask m) = go (splitFin p m)
+        |       p < px           = t
+        |      otherwise         = Nil
+
+    go    Nil = Nil
 
 {--------------------------------------------------------------------
   Partition

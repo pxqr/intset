@@ -83,6 +83,7 @@ main = defaultMain $
   ++ concat
   [ splitBenchs
   , splitGTBenchs
+  , splitLTBenchs
   , mergeTempl S.union        SB.union        "union"
   , mergeTempl S.intersection SB.intersection "intersection"
   , mergeTempl S.difference   SB.difference   "difference"
@@ -101,6 +102,13 @@ splitGTBenchs = complexBench "split/GT" 1000000 (chunk S.split) (chunkGT SB.spli
     chunkGT op s = L.foldr op s points
     chunk op s = L.foldr ((snd .) . op) s points
     points     = [100,200..1000000]
+
+splitLTBenchs :: [Benchmark]
+splitLTBenchs = complexBench "split/LT" 1000000 (chunk S.split) (chunkGT SB.splitLT)
+  where
+    chunkGT op s = L.foldr op s points
+    chunk op s = L.foldr ((fst .) . op) s points
+    points     = reverse [100,200..1000000]
 
 {--------------------------------------------------------------------
   Benchmark Templates

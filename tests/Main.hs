@@ -212,6 +212,9 @@ prop_splitPivot s k = all (< k) (toList lt) && all (k <) (toList gt)
 prop_splitGT :: IntSet -> Key -> Bool
 prop_splitGT s k = all (k <) (toList (splitGT k s))
 
+prop_splitLT :: IntSet -> Key -> Bool
+prop_splitLT s k = all (< k) (toList (splitLT k s))
+
 main :: IO ()
 main = defaultMain
   [ testProperty "empty"                prop_empty
@@ -274,6 +277,7 @@ main = defaultMain
 
   , testProperty "split pivot"               prop_splitPivot
   , testProperty "split greater than"        prop_splitGT
+  , testProperty "split lesser  than"        prop_splitLT
 
   , testProperty "min"                  prop_min
   , testProperty "valid"                prop_valid
