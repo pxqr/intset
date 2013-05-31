@@ -706,12 +706,43 @@ splitBM !px !tbm = root
 
     go  Nil          = Nil :*: Nil
 
--- TODO specialize
+-- | /O(min(W, n)/. Takes subset such that each element is greater
+-- than the specified key. The exact key is excluded from result.
 splitGT :: Key -> IntSet -> IntSet
-splitGT !x = fst . split x
-{-# INLINE splitGT #-}
+splitGT !k = splitBMGT (prefixOf k) (bitmapOf k)
 
--- TODO specialize
+splitBMGT :: Prefix -> BitMap -> IntSet -> IntSet
+splitBMGT !px !tbm = root
+  where
+    root t@(Bin _ m l r)
+      |  m  >= 0  = go t
+      |  px >= 0  = go l
+      | otherwise = go r `union` l
+    root t = go t
+
+    go t@(Bin p m l r)
+        | nomatch px p m = if p < px then Nil else t
+        |   zero px m    = go l `union` r
+        |   otherwise    = go r
+
+    go t@(Tip p bm)
+        |     px < p   = t
+        | p < px       = Nil
+        |   otherwise  = tipD px (bm .&. hghBM)
+      where
+        lowBM = tbm - 1
+        hghBM = Bits.complement (lowBM + tbm)
+
+    go t@(Fin p m)
+        | match px p (finMask m) = go (splitFin p m)
+        |        p < px          = Nil
+        |      otherwise         = t
+
+    go    Nil          = Nil
+
+
+-- | /O(min(W, n)/. Takes subset such that each element is less
+-- than the specified key. The exact key is excluded from result.
 splitLT :: Key -> IntSet -> IntSet
 splitLT !x = snd . split x
 {-# INLINE splitLT #-}

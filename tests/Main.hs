@@ -16,13 +16,13 @@ instance Arbitrary IntSet where
   arbitrary = buddy <$> arbitrary
     where
       buddy :: [Int] -> IntSet
-      buddy = fromList . concatMap (mk . abs)
+      buddy = fromList . concatMap mk
         where
           mk i = [i * 64 .. i * 64 + 64]
 
-  shrink (Bin _ _ l r) = [l, r]
-  shrink (Fin p m)     = [splitFin p m]
-  shrink  _            = []
+--  shrink (Bin _ _ l r) = [l, r]
+--  shrink (Fin p m)     = [splitFin p m]
+--  shrink  _            = []
 
 prop_empty :: [Int] -> Bool
 prop_empty xs = (not . (`member` empty)) `all` xs
@@ -44,10 +44,8 @@ prop_unionLookup a b = and
   where
     u = union (fromList a) (fromList b)
 
-prop_sort :: [Int] -> Bool
-prop_sort xs' = toList (fromList xs) == L.nub (L.sort xs)
-  where
-    xs = L.map abs xs'
+prop_sorted :: IntSet -> Bool
+prop_sorted xs = toList xs == L.nub (L.sort (toList xs))
 
 prop_valid :: IntSet -> Bool
 prop_valid = isValid
@@ -211,6 +209,9 @@ prop_splitPivot s k = all (< k) (toList lt) && all (k <) (toList gt)
   where
     (lt, gt) = split k s
 
+prop_splitGT :: IntSet -> Key -> Bool
+prop_splitGT s k = all (k <) (toList (splitGT k s))
+
 main :: IO ()
 main = defaultMain
   [ testProperty "empty"                prop_empty
@@ -227,7 +228,7 @@ main = defaultMain
   , testProperty "negatives"            prop_negatives
 
   , testProperty "size"                 prop_size
-  , testProperty "sort"                 prop_sort
+  , testProperty "sort"                 prop_sorted
 
 
   , testProperty "read . show == id"    prop_showRead
@@ -272,7 +273,7 @@ main = defaultMain
   , testProperty "difference distributive"   prop_differenceDistributive
 
   , testProperty "split pivot"               prop_splitPivot
-
+  , testProperty "split greater than"        prop_splitGT
 
   , testProperty "min"                  prop_min
   , testProperty "valid"                prop_valid
