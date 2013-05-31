@@ -13,8 +13,6 @@
 --     * Fast Mergeable Integer Maps (1998) by Chris Okasaki, Andrew Gill
 --       <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.37.5452>
 --
---     * TODO find buddy explanation; if there is no - write somewhere here.
---
 --   This implementation is pretty similar to Data.IntSet from
 --   containers package. It's expected that Data.IntSet.Buddy will be
 --   slightly slower in randomized settings (e.g. fromList
@@ -27,21 +25,19 @@
 --     * n - number of elements in a set;
 --
 --     * W - number bits in a 'Key'. This is 32 at 32 bit platforms
---     and 64 at 64 bit platforms
+--     and 64 at 64 bit platforms;
 --
 --     * O(n) or O(k) means this operation have complexity O(n) in
 --     worst case (e.g. sparse set) or O(k) in best case (e.g. one
 --     single interval).
 --
 --   Note that some operations will take centuries to compute. For
---   exsample @map id universe@ will never end as well as filter with
---   conjunction with universe, naturals, positives, negatives.
+--   exsample @map id universe@ will never end as well as 'filter'
+--   applied to 'universe', 'naturals', 'positives' or 'negatives'.
 --
 --   Also note that some operations like 'union', 'intersection' and
 --   'difference' have overriden from default fixity, so use these
---   operations with conjunction with infix syntax carefully.
---
---   -- TODO Fin explanation
+--   operations with infix syntax carefully.
 --
 {-# LANGUAGE CPP #-}
 

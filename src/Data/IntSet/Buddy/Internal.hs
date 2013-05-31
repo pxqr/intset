@@ -179,20 +179,29 @@ data IntSet
 {--------------------------------------------------------------------
   Invariants
 --------------------------------------------------------------------}
--- |
---   + Nil is never child of Bin;
---   + Bin is never contain two Fins with masks equal to mask of Bin;
---   - Mask becomes smaller at each child;
---   - Bin, Fin, Tip masks is always power of two;
---   + Fin mask is always greater or equal than size of bits in word;
---   - Bin left subtree contains element each of which is less than each element
---     of right subtree;
---   + Tip bitmap is never full;
---   + Tip mask is multiple of word bit count;
+
+-- | The following invariants should be hold in all subtrees of a set:
 --
---  See 'binI' to find out when two intsets should be merged into one.
+--   1. + Nil is never child of Bin;
 --
--- TODO check 2,3,4 invariants
+--   2. + Bin is never contain two Fins with masks equal to mask of Bin;
+--
+--   3. - Mask becomes smaller at each child;
+--
+--   4. - Bin, Fin, Tip masks is always power of two;
+--
+--   5. + Fin mask is always greater or equal than size of bits in word;
+--
+--   6. - Bin left subtree contains element each of which is less than
+--     each element of right subtree;
+--
+--   7. + Tip bitmap is never full;
+--
+--   8. + Tip mask is multiple of word bit count;
+--
+--   See 'binI' to find out when two intsets should be merged into one.
+--
+--   TODO check 3, 4, 6 invariants
 --
 isValid :: IntSet -> Bool
 isValid  Nil       = True
@@ -657,19 +666,15 @@ unStrict (a :*: b) = (a, b)
   Splits
 --------------------------------------------------------------------}
 
--- TODO docs
+-- | /O(min(W, n)/. Split the set such that the left projection of the
+-- resulting pair contains elements less than the key and right
+-- element contains greater than the key. The exact key is excluded
+-- from result:
+--
+-- > split 5 (fromList [0..10]) == (fromList [0..4], fromList [6..10])
+--
 split :: Key -> IntSet -> (IntSet, IntSet)
 split !k = unStrict . splitBM (prefixOf k) (bitmapOf k)
-
--- TODO specialize
-splitGT :: Key -> IntSet -> IntSet
-splitGT !x = fst . split x
-{-# INLINE splitGT #-}
-
--- TODO specialize
-splitLT :: Key -> IntSet -> IntSet
-splitLT !x = snd . split x
-{-# INLINE splitLT #-}
 
 splitBM :: Prefix -> BitMap -> IntSet -> SPair IntSet IntSet
 splitBM !px !tbm = root
@@ -697,9 +702,30 @@ splitBM !px !tbm = root
     go t@(Fin p m )
         | match px p (finMask m) = go (splitFin p m)
         |       p < px           = t   :*: Nil
-        |        otherwise       = Nil :*: t         -- | px < p
+        |        otherwise       = Nil :*: t         -- px < p
 
     go  Nil          = Nil :*: Nil
+
+-- TODO specialize
+splitGT :: Key -> IntSet -> IntSet
+splitGT !x = fst . split x
+{-# INLINE splitGT #-}
+
+-- TODO specialize
+splitLT :: Key -> IntSet -> IntSet
+splitLT !x = snd . split x
+{-# INLINE splitLT #-}
+
+
+{--------------------------------------------------------------------
+  Partition
+--------------------------------------------------------------------}
+
+partition :: (Key -> Bool) -> IntSet -> (IntSet, IntSet)
+partition f = unStrict . go
+  where
+    go (Tip _ _) = undefined
+    go  Nil      = Nil :*: Nil
 
 {--------------------------------------------------------------------
   Min/max
@@ -851,6 +877,20 @@ elems = toList
 {--------------------------------------------------------------------
   Smart constructors
 --------------------------------------------------------------------}
+
+{-
+ we postfix smart constructors:
+
+ * with 'I' - if we have inserted to the tree given as argument;
+ * with 'D' - if we have deleted from the tree given as argument;
+ * without  - to denote that we either insert or delete from tree;
+
+ Use more specific version of the constructor when possible to avoid
+ unneccesary branching (some branches that never executes due to
+ invariants) and less condition tests.
+
+-}
+
 -- used when we insert to the tip
 tipI :: Prefix -> BitMap -> IntSet
 tipI p bm
@@ -1027,7 +1067,7 @@ isFull x = x == Bits.complement 0
 
 
 {--------------------------------------------------------------------
-  All later code is taken from Data.IntSet.Base
+  Some of the later code is taken from Data.IntSet.Base
 --------------------------------------------------------------------}
 type Nat = Word
 
