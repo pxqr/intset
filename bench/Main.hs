@@ -58,6 +58,8 @@ main = defaultMain $
   , bench "fromList/S-20K" $ nf SB.fromList [0..20000]
   , bench "fromList/S-20K-sparse" $ nf SB.fromList (L.map (* 10) [0..20000])
 
+  , bench "interval/O-200K" $ whnf S.fromDistinctAscList [0..200000]
+  , bench "interval/S-2M"   $ whnf (SB.interval 0) 2000000
 
   , let !s = S.fromList [1..50000] in
     bench "toList/50K" $ nf S.toList s

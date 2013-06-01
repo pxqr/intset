@@ -215,6 +215,12 @@ prop_splitGT s k = all (k <) (toList (splitGT k s))
 prop_splitLT :: IntSet -> Key -> Bool
 prop_splitLT s k = all (< k) (toList (splitLT k s))
 
+prop_interval :: Int -> Int -> Bool
+prop_interval a s = interval l r == fromList [l..r]
+  where
+    l = a
+    r = l + max 10000 s
+
 main :: IO ()
 main = defaultMain
   [ testProperty "empty"                prop_empty

@@ -34,11 +34,13 @@ module Data.IntSet.Buddy.Internal
          -- * Construction
        , empty
        , singleton
+       , interval
 
        , naturals
        , negatives
        , universe
 
+         -- * Modification
        , insert
        , delete
 
@@ -103,6 +105,13 @@ import Data.Monoid
 import Data.Ord
 import Data.Word
 import Text.ParserCombinators.ReadP
+import Debug.Trace
+
+
+-- machine specific properties of basic types
+#if defined(__GLASGOW_HASKELL__)
+#include "MachDeps.h"
+#endif
 
 
 -- | Prefix is used to distinguish subtrees by its prefix bits.  When
@@ -312,6 +321,33 @@ singleton :: Key -> IntSet
 singleton x = Tip (prefixOf x) (bitmapOf x)
 {-# INLINE singleton #-}
 
+-- | /O(min(W, n))/. Set containing elements from the specified range.
+--
+--  > interval a b = fromList [a..b]
+--
+interval :: Key -> Key -> IntSet
+interval l r
+    | l < 0 && r >= 0 = go l (-1) `union` go 0 r
+    |     otherwise   = go l r
+  where
+    go a b
+        |            b < a              = empty
+--        |            a == b             = singleton a
+        | WORD_SIZE_IN_BITS `shorter` m = tip (prefixOf a) (intervalBM a b)
+        |           otherwise           = bin p m (interval a (mid - 1)) (interval mid b)
+      where
+        mid = p .|. m
+        p = mask a m
+        m = branchMask a b
+
+intervalBM :: Int -> Int -> BitMap
+intervalBM a b =
+  let abm = bitmapOf a
+      bbm = bitmapOf b
+  in fromIntegral (Bits.complement (abm - 1) .&. ((bbm - 1) .|. bbm))
+
+
+
 -- | /O(1)/. The set containing all natural numbers.
 naturals :: IntSet
 naturals = Fin 0 (bit 63)
@@ -326,6 +362,11 @@ negatives = Fin (bit 63) (bit 63)
 universe :: IntSet
 universe = Fin (bit 63) 0
 {-# INLINE universe #-}
+
+
+{--------------------------------------------------------------------
+  Modification
+--------------------------------------------------------------------}
 
 -- | /O(min(W, n)/ or /O(1)/. Add a value to the set.
 insert :: Key -> IntSet -> IntSet
@@ -392,10 +433,6 @@ splitFin p m
 complement :: IntSet -> IntSet
 complement Nil = universe
 complement _   = error "complement: not implemented"
-
--- TODO
-interval :: Key -> Key -> IntSet
-interval = undefined
 
 {--------------------------------------------------------------------
   Combine
