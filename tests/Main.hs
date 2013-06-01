@@ -219,7 +219,24 @@ prop_interval :: Int -> Int -> Bool
 prop_interval a s = interval l r == fromList [l..r]
   where
     l = a
-    r = l + max 10000 s
+    r = l + min 10000 s
+
+prop_cmp :: IntSet -> IntSet -> Bool
+prop_cmp a b = compare a b == compare (toList a) (toList b)
+
+prop_numInst :: Int -> Bool
+prop_numInst i = fromIntegral i == singleton i
+
+prop_deleteEmpty :: Int -> Bool
+prop_deleteEmpty k = delete k empty == empty
+
+prop_combine :: [IntSet] -> Bool
+prop_combine xs = all check xs
+  where
+    check x = us <> x == us && is * x == is
+    us = mconcat xs
+    is = intersections xs
+
 
 main :: IO ()
 main = defaultMain
@@ -227,6 +244,9 @@ main = defaultMain
   , testProperty "singleton"            prop_singleton
   , testProperty "insertLookup"         prop_insertLookup
   , testProperty "insert delete"        prop_insertDelete
+  , testProperty "compare"              prop_cmp
+  , testProperty "interval"             prop_interval
+
 
 --  , testProperty "universe member"      prop_universeMember
 --  , testProperty "universe delete"      prop_universeDelete
@@ -288,4 +308,8 @@ main = defaultMain
   , testProperty "min"                  prop_min
   , testProperty "valid"                prop_valid
 
+    -- for coverage mostly
+  , testProperty "delete from empty"    prop_deleteEmpty
+  , testProperty "combine"              prop_combine
+  , testProperty "num instance"         prop_numInst
   ]

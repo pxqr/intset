@@ -105,7 +105,6 @@ import Data.Monoid
 import Data.Ord
 import Data.Word
 import Text.ParserCombinators.ReadP
-import Debug.Trace
 
 
 -- machine specific properties of basic types
@@ -181,7 +180,7 @@ data IntSet
   | Nil
   deriving
     ( Eq
-#if __GLASGOW_HASKELL__
+#if defined(__GLASGOW_HASKELL__)
     , Typeable, Data
 #endif
     )
