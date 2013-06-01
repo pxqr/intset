@@ -135,11 +135,12 @@ type Mask   = Int
 
 -- | Bitmap is used to make intset dense. To achive this we throw away
 -- last bits 6 or 7 bits from any(!) prefix and thus any(!) mask
--- should be more than 64 or 32. Bitmap by itself contain flags which
--- indicates "is an element present in a set?" by marking suffices
--- indices. For exsample bitmap 01001010 contain elements 2, 5 and 7.
+-- should be more than word size in bits. Bitmap by itself contain
+-- flags which indicates "is an element present in a set?" by marking
+-- suffices indices. For exsample bitmap 01001010 contain elements 2,
+-- 5 and 7.
 --
---   One bitmap might contain up to 64 or 32 (depending on arch)
+--   One bitmap might contain up to word size in bits (depending on arch)
 -- elements.
 --
 type BitMap = Word
@@ -214,8 +215,8 @@ data IntSet
 --
 isValid :: IntSet -> Bool
 isValid  Nil       = True
-isValid (Tip p bm) = not (isFull bm) && (p `mod` 64 == 0)
-isValid (Fin _ m ) = m >= 64
+isValid (Tip p bm) = not (isFull bm) && (p `mod` WORD_SIZE_IN_BITS == 0)
+isValid (Fin _ m ) = m >= WORD_SIZE_IN_BITS
 isValid (Bin _  _ Nil _  ) = error "Bin _ _ Nil _"
 isValid (Bin _  _ _   Nil) = error "Bin _ _ _   Nil"
 isValid (Bin _  m (Fin _ m1) (Fin _ m2))
@@ -321,6 +322,7 @@ singleton :: Key -> IntSet
 singleton x = Tip (prefixOf x) (bitmapOf x)
 {-# INLINE singleton #-}
 
+-- TODO make it faster
 -- | /O(min(W, n))/. Set containing elements from the specified range.
 --
 --  > interval a b = fromList [a..b]
@@ -350,17 +352,17 @@ intervalBM a b =
 
 -- | /O(1)/. The set containing all natural numbers.
 naturals :: IntSet
-naturals = Fin 0 (bit 63)
+naturals = Fin 0 (bit (WORD_SIZE_IN_BITS - 1))
 {-# INLINE naturals #-}
 
 -- | /O(1)/. The set containing all negative numbers.
 negatives :: IntSet
-negatives = Fin (bit 63) (bit 63)
+negatives = Fin (bit (WORD_SIZE_IN_BITS - 1)) (bit (WORD_SIZE_IN_BITS - 1))
 {-# INLINE negatives #-}
 
 -- | /O(1)/. The set containing the all integers it might contain.
 universe :: IntSet
-universe = Fin (bit 63) 0
+universe = Fin (bit (WORD_SIZE_IN_BITS - 1)) 0
 {-# INLINE universe #-}
 
 
@@ -424,8 +426,8 @@ splitFin p m
   -- WARN here we have inconsistency - bitmap is full
   -- but this will be fixed in next go for any kx bm
   -- and this faster (I think)
-  |  m == 64  = Tip p (Bits.complement 0)
-   | otherwise = Bin p m' (Fin p m') (Fin (p + m') m')
+   | m == WORD_SIZE_IN_BITS = Tip p (Bits.complement 0)
+   |       otherwise        = Bin p m' (Fin p m') (Fin (p + m') m')
   where
     m' = intFromNat ((natFromInt m) `shiftR` 1) -- TODO endian independent
 {-# INLINE splitFin #-}
@@ -991,7 +993,7 @@ elems = toList
 -- used when we insert to the tip
 tipI :: Prefix -> BitMap -> IntSet
 tipI p bm
-  | isFull bm = Fin p 64
+  | isFull bm = Fin p WORD_SIZE_IN_BITS
   | otherwise = Tip p bm
 {-# INLINE tipI #-}
 
@@ -1005,7 +1007,7 @@ tipD p bm = Tip p bm
 tip :: Prefix -> BitMap -> IntSet
 tip p bm
   |  bm == 0  = Nil
-  | isFull bm = Fin p 64
+  | isFull bm = Fin p WORD_SIZE_IN_BITS
   | otherwise = Tip p bm
 {-# INLINE tip #-}
 
@@ -1013,7 +1015,7 @@ tip p bm
 binI :: Prefix -> Mask -> IntSet -> IntSet -> IntSet
 -- DONE convert full Tip to Fin, then we can avoid this pattern matching
 --binI _ _ (Tip p1 bm1) (Tip p2 bm2)
---  | isFull bm1 && isFull bm2 && xor p1 p2 == 64
+--  | isFull bm1 && isFull bm2 && xor p1 p2 == WORD_SIZE_IN_BITS
 --  = Fin p1 128
 
 binI p m (Fin _  m1) (Fin _  m2)
@@ -1080,7 +1082,7 @@ origSize :: IntSet -> Int
 origSize (Bin _ _ l r) = 5 + origSize l + origSize r
 origSize (Tip _ _)     = 3
 origSize (Fin _ m)     =
-  let tips = m `div` 64
+  let tips = m `div` WORD_SIZE_IN_BITS
       bins = tips - 1
   in tips * 3 + bins * 5
 origSize  Nil          = 1
@@ -1152,9 +1154,9 @@ foldrBits :: Int -> (Int -> a -> a) -> a -> BitMap -> a
 foldrBits p f acc bm = go 0
   where
     go i
-      |   i == 64    = acc
-      | testBit bm i = f (p + i) (go (succ i))
-      |   otherwise  = go (succ i)
+      | i == WORD_SIZE_IN_BITS = acc
+      |       testBit bm i     = f (p + i) (go (succ i))
+      |         otherwise      = go (succ i)
 
 
 isFull :: BitMap -> Bool
