@@ -21,13 +21,13 @@
 {-# LANGUAGE Trustworthy #-}
 #endif
 
-module Data.IntSet.Buddy.Internal
+module Data.IntervalSet.Internal
        (
          -- * Types
          IntSet(..), Key
 
          -- * Query
-       , Data.IntSet.Buddy.Internal.null
+       , Data.IntervalSet.Internal.null
        , size
        , member, notMember
 
@@ -45,9 +45,9 @@ module Data.IntSet.Buddy.Internal
        , delete
 
          -- * Map/Fold/Filter
-       , Data.IntSet.Buddy.Internal.map
-       , Data.IntSet.Buddy.Internal.foldr
-       , Data.IntSet.Buddy.Internal.filter
+       , Data.IntervalSet.Internal.map
+       , Data.IntervalSet.Internal.foldr
+       , Data.IntervalSet.Internal.filter
 
          -- * Splits
        , split, splitGT, splitLT
@@ -65,7 +65,7 @@ module Data.IntSet.Buddy.Internal
        , elems
        , toList, fromList
 
-         -- do not export this in Data.IntSet.Buddy
+         -- do not export this in Data.IntervalSet
          -- * Internal
          -- ** Types
        , Prefix, Mask, BitMap
@@ -256,9 +256,9 @@ instance Num IntSet where
   (+) = union
   (*) = intersection
   (-) = difference
-  negate = Data.IntSet.Buddy.Internal.complement
-  abs = error "IntSet.abs: not implemented"
-  signum = error "IntSet.singum: not implemented"
+  negate = Data.IntervalSet.Internal.complement
+  abs = error "IntervalSet.abs: not implemented"
+  signum = error "IntervalSet.singum: not implemented"
   fromInteger = singleton . fromIntegral
 
 instance Bounded IntSet where
@@ -897,7 +897,7 @@ unstream = fromList
 --------------------------------------------------------------------}
 
 {-# RULES
-  "IntSet/map/id" Data.IntSet.Buddy.Internal.map id = id
+  "IntSet/map/id" Data.IntervalSet.Internal.map id = id
   #-}
 
 -- TODO fusion
@@ -963,7 +963,7 @@ fromList = L.foldl' (flip insert) empty
 
 -- | /O(n)/. Convert the set to a list of its elements.
 toList :: IntSet -> [Key]
-toList = Data.IntSet.Buddy.Internal.foldr (:) []
+toList = Data.IntervalSet.Internal.foldr (:) []
 {-# NOINLINE [3] toList #-}
 
 -- | 'elems' is alias to 'toList' for compatibility.

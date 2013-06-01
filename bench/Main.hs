@@ -27,8 +27,8 @@ import Data.Bits
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import Data.IntSet as S
-import Data.IntSet.Buddy as SB
-import Data.IntSet.Buddy.ByteString as SB
+import Data.IntervalSet as SB
+import Data.IntervalSet.ByteString as SB
 import Data.List as L
 import Data.Word
 

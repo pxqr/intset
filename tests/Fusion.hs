@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Data.IntSet.Buddy as S
+import Data.IntervalSet as S
 import System.Exit
 
 -- should fuse to id

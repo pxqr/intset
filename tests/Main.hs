@@ -7,7 +7,7 @@ import Test.Framework
 import Test.Framework.Providers.QuickCheck2
 
 import Data.List as L (sort, nub, map, filter, minimum, intersect)
-import Data.IntSet.Buddy as S
+import Data.IntervalSet as S
 import Data.Monoid
 
 

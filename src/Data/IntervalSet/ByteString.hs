@@ -10,7 +10,7 @@
 --
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Data.IntSet.Buddy.ByteString
+module Data.IntervalSet.ByteString
        ( fromByteString
        , toByteString, toLazyByteString
 
@@ -28,7 +28,7 @@ import qualified Data.ByteString.Lazy  as BSL
 import Foreign
 import Data.Monoid
 
-import Data.IntSet.Buddy.Internal
+import Data.IntervalSet.Internal
 
 {-
   it seems like we have this conversion hella fast by desing

@@ -45,7 +45,7 @@
 {-# LANGUAGE Safe #-}
 #endif
 
-module Data.IntSet.Buddy
+module Data.IntervalSet
        (
          -- * Types
          IntSet(..), Key
@@ -95,4 +95,4 @@ module Data.IntSet.Buddy
 #endif
        ) where
 
-import Data.IntSet.Buddy.Internal as SB
+import Data.IntervalSet.Internal as SB
