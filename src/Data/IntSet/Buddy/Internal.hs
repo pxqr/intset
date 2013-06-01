@@ -428,7 +428,7 @@ splitFin p m
    | otherwise = Bin p m' (Fin p m') (Fin (p + m') m')
   where
     m' = intFromNat ((natFromInt m) `shiftR` 1) -- TODO endian independent
-
+{-# INLINE splitFin #-}
 
 complement :: IntSet -> IntSet
 complement Nil = universe
@@ -757,12 +757,12 @@ splitBMGT !px !tbm = root
     root t@(Bin _ m l r)
       |  m  >= 0  = go t
       |  px >= 0  = go l
-      | otherwise = go r `union` l
+      | otherwise = let !r' = go r in union r' l
     root t = go t
 
     go t@(Bin p m l r)
         | nomatch px p m = if p < px then Nil else t
-        |   zero px m    = go l `union` r
+        |   zero px m    = let !l' = go l in union l' r
         |   otherwise    = go r
 
     go t@(Tip p bm)
@@ -778,7 +778,7 @@ splitBMGT !px !tbm = root
         |        p < px          = Nil
         |      otherwise         = t
 
-    go    Nil          = Nil
+    go   Nil          = Nil
 
 
 -- | /O(min(W, n)/. Takes subset such that each element is less
