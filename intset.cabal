@@ -27,10 +27,13 @@ description:
    In randomized settings this structure expected to be as fast as
    Data.IntSet from containers.
 
+
 source-repository head
   type:                git
   location:            https://github.com/pxqr/intset.git
 
+
+extra-source-files:    README.md .travis.yml
 
 
 library
