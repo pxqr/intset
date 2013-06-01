@@ -43,7 +43,8 @@ library
                      , deepseq
 
   hs-source-dirs:      src
-  ghc-options:         -Wall -DTESTING
+  ghc-options:         -Wall
+  cpp-options:         -DTESTING
 
 
 test-suite properties
