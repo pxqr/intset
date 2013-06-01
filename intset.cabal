@@ -28,12 +28,12 @@ description:
    Data.IntSet from containers.
 
 
+extra-source-files:    README.md .travis.yml
+
+
 source-repository head
   type:                git
   location:            https://github.com/pxqr/intset.git
-
-
-extra-source-files:    README.md .travis.yml
 
 
 library
