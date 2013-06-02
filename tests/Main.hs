@@ -12,17 +12,16 @@ import Data.Monoid
 
 
 instance Arbitrary IntSet where
---  arbitrary = fromList <$> arbitrary
-  arbitrary = buddy <$> arbitrary
+  arbitrary = oneof [fromList <$> arbitrary, buddy <$> arbitrary]
     where
       buddy :: [Int] -> IntSet
       buddy = fromList . concatMap mk
         where
           mk i = [i * 64 .. i * 64 + 64]
 
---  shrink (Bin _ _ l r) = [l, r]
---  shrink (Fin p m)     = [splitFin p m]
---  shrink  _            = []
+  shrink (Bin _ _ l r) = [l, r]
+  shrink (Fin p m)     = [splitFin p m]
+  shrink  _            = []
 
 prop_empty :: [Int] -> Bool
 prop_empty xs = (not . (`member` empty)) `all` xs
@@ -192,8 +191,10 @@ prop_differenceIntersection a b = (difference a b `intersection` b) == empty
 prop_differenceSize :: IntSet -> IntSet -> Bool
 prop_differenceSize a b = size (difference a b) <= size a
 
+
 prop_differenceSubset :: IntSet -> IntSet -> Bool
 prop_differenceSubset = undefined
+
 
 prop_differenceDeMorgan1 :: IntSet -> IntSet -> IntSet -> Bool
 prop_differenceDeMorgan1 a b c = a - b * c == (a - b) + (a - c)
@@ -206,6 +207,11 @@ prop_differenceDistributive a b c = (a + b) - c == (a - c) + (b - c)
 
 prop_splitPivot :: IntSet -> Key -> Bool
 prop_splitPivot s k = all (< k) (toList lt) && all (k <) (toList gt)
+  where
+    (lt, gt) = split k s
+
+prop_splitIntersect :: IntSet -> Key -> Bool
+prop_splitIntersect s k = lt * gt == empty
   where
     (lt, gt) = split k s
 
@@ -230,12 +236,20 @@ prop_numInst i = fromIntegral i == singleton i
 prop_deleteEmpty :: Int -> Bool
 prop_deleteEmpty k = delete k empty == empty
 
+prop_elems :: IntSet -> Bool
+prop_elems s = toList s == elems s
+
 prop_combine :: [IntSet] -> Bool
 prop_combine xs = all check xs
   where
     check x = us <> x == us && is * x == is
     us = mconcat xs
     is = intersections xs
+
+prop_sortIdemp :: [Int] -> Bool
+prop_sortIdemp xs = let a = ssort xs in ssort a == a
+  where
+    ssort = toList . fromList
 
 
 main :: IO ()
@@ -258,6 +272,7 @@ main = defaultMain
 
   , testProperty "size"                 prop_size
   , testProperty "sort"                 prop_sorted
+  , testProperty "sort idempotent"      prop_sortIdemp
 
 
   , testProperty "read . show == id"    prop_showRead
@@ -302,6 +317,7 @@ main = defaultMain
   , testProperty "difference distributive"   prop_differenceDistributive
 
   , testProperty "split pivot"               prop_splitPivot
+  , testProperty "split intersection"        prop_splitIntersect
   , testProperty "split greater than"        prop_splitGT
   , testProperty "split lesser  than"        prop_splitLT
 
@@ -312,4 +328,5 @@ main = defaultMain
   , testProperty "delete from empty"    prop_deleteEmpty
   , testProperty "combine"              prop_combine
   , testProperty "num instance"         prop_numInst
+  , testProperty "elems"                prop_elems
   ]
