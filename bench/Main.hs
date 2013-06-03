@@ -82,8 +82,8 @@ main = defaultMain $
   , let !s = SB.fromList [0, 2 .. 1000000 * 2] in
     bench "bitmap/to-1M-S-dense" $ nf SB.toLazyByteString s
 
-  , let !s = interval 0 100000000 in
-    bench "bitmap/to-100M-S-buddy" $ nf SB.toLazyByteString s
+  , let !s = interval 0 10000000 in
+    bench "bitmap/to-10M-S-buddy" $ nf SB.toLazyByteString s
 
   , let !s = S.fromList [0..1000000] in
     bench "member/1M" $ nf (L.all (`S.member` s)) [50000..100000]

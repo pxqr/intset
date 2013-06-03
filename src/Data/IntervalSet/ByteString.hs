@@ -113,37 +113,31 @@ foldrWord p f acc bm = go 0
 --   NOTE: negative elements are ignored!
 --
 toBuilder :: IntSet -> Builder
-toBuilder = snd . go 0 . splitGT (-1)
+toBuilder _s = go (splitGT (-1) _s) (\_ -> BS.byteString "") 0
   where
-    wordSize = sizeOf (0 :: Word)
-    indent n p = BS.byteString $ BS.replicate bsize 0
-      where
-        bsize = (p - n) `div` 8
+    indent n p = BS.byteString $ BS.replicate ((p - n) `shiftR` 3) 0
+    {-# INLINE indent #-}
 
-    -- TODO trim last zeroed bytes
-    -- TODO perform CPS transformation
-    go n (Bin _ _ l r) = let (n',  bl) = go n l
-                             (n'', br) = go n' r
-                         in (n'', bl <> br)
-    go n (Tip p bm)    = (p + wordSize * 8
-                         , indent n p <> wordLE (fromIntegral bm)
-                         )
-      where
+    {-# INLINE wordLE #-}
 #if WORD_SIZE_IN_BITS == 64
-        wordLE = BS.word64LE
+    wordLE = BS.word64LE
 #elif WORD_SIZE_IN_BITS == 32
-        wordLE = BS.word32LE
+    wordLE = BS.word32LE
 #else
 #error Unsupported platform
 #endif
 
-    go n (Fin p m)     = ( p + m
-                         , indent n p <> BS.byteString (BS.replicate bsize 255)
-                         )
-      where -- INVARIANT m is always multiple of 8
-        bsize = div m 8
-
-    go n  Nil          = (n, BS.byteString "")
+    -- TODO trim last zeroed bytes
+    go :: IntSet -> (Int -> Builder) -> (Int -> Builder)
+    go s c !n = case s of
+      Bin _ _ l r -> go l (go r c) n
+      Tip p bm    -> indent n p <>
+                     wordLE (fromIntegral bm) <>
+                     c (p + WORD_SIZE_IN_BITS)
+      Fin p m     -> indent n p <>
+                     BS.byteString (BS.replicate (m `shiftR` 3) 255) <>
+                     c (p + m)
+      Nil         -> c n
 
 -- | Pack the 'IntSet' as bitmap to the lazy bytestring.
 --
