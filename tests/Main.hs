@@ -8,7 +8,9 @@ import Test.Framework.Providers.QuickCheck2
 
 import Data.List as L (sort, nub, map, filter, minimum, intersect)
 import Data.IntervalSet as S
+import Data.IntervalSet.ByteString as S
 import Data.Monoid
+import Debug.Trace
 
 
 instance Arbitrary IntSet where
@@ -251,6 +253,10 @@ prop_sortIdemp xs = let a = ssort xs in ssort a == a
   where
     ssort = toList . fromList
 
+prop_bitmapEncode :: IntSet -> Bool
+prop_bitmapEncode xs = fromByteString (toByteString xs') == xs'
+  where -- we should restrict upper bound otherwise we might have out of memory
+    xs' = splitGT (-1) $ splitLT 1000000 xs
 
 main :: IO ()
 main = defaultMain
@@ -261,6 +267,7 @@ main = defaultMain
   , testProperty "compare"              prop_cmp
   , testProperty "interval"             prop_interval
 
+  , testProperty "bitmap_encode"        prop_bitmapEncode
 
 --  , testProperty "universe member"      prop_universeMember
 --  , testProperty "universe delete"      prop_universeDelete

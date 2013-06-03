@@ -6,8 +6,11 @@
 --   Portability :  portable
 --
 --   Fast conversion from or to lazy and strict bytestrings.
+--   Serialized IntSets are represented as single continious bitmap.
+--
 --   This module is kept separated due safe considerations.
 --
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Data.IntervalSet.ByteString
@@ -30,6 +33,11 @@ import Data.Monoid
 
 import Data.IntervalSet.Internal
 
+
+#if defined(__GLASGOW_HASKELL__)
+#include "MachDeps.h"
+#endif
+
 {-
   it seems like we have this conversion hella fast by desing
   e.g. read by blocks(bitmaps), fast merge, fast 'bin'
@@ -39,6 +47,7 @@ import Data.IntervalSet.Internal
   TODO carefully force this behaviour
 -}
 
+-- | Unpack 'IntSet' from bitmap.
 fromByteString :: ByteString -> IntSet
 fromByteString bs =
     let (fptr, off, len) = BS.toForeignPtr bs in
@@ -47,57 +56,109 @@ fromByteString bs =
       let !s = goFrom (castPtr ptr) len
       return $! s
   where
-    goFrom ptr len =
---      go 0 empty
-        goTree 0 len
-      where
-        -- TODO go treelike
-        wordSize = sizeOf (0 :: Word)
+    wordSize = sizeOf (0 :: Word)
 
+    goFrom ptr len = go 0 empty -- goTree 0 len
+      where
         go :: Int -> IntSet -> IntSet
         go !x !acc
           |  x + wordSize <= len  = do
-            let bm = BS.inlinePerformIO (peekByteOff ptr x)
-            let !s = unionBM (x * 8) bm acc
+            let !bm = BS.inlinePerformIO (peekByteOff ptr x) -- TODO read little endian
+            let !s  = unionBM (x * wordSize) bm acc
             go (x + wordSize) s
           | otherwise = goBytes x acc
 
+        goBytes :: Int -> IntSet -> IntSet
+        goBytes !i !s
+          |   i < len =
+            let wbm = BS.inlinePerformIO (peekByteOff ptr i)
+                s'  = foldrWord (i * 8) insert s wbm
+            in  goBytes (i + 1)  s'
+          | otherwise = s
+
+{-
         goTree :: Int -> Int -> IntSet
         goTree !l !r
-          | r - l <= wordSize =
+          | traceShow (l, r) False = undefined
+          | r - l > wordSize =
+            let !px  = l `shiftL` 3
+                !qx  = r `shiftL` 3
+                !msk = branchMask px qx
+                -- TODO fix mid
+                !mid = let br = branchMask l r in if br == r
+                                                  then div (r + l) 2
+                                                  else br
+            in traceShow (l, mid, r, px, qx, msk) $
+               bin  px msk (goTree l mid) (goTree mid r)
+
+          | r - l == wordSize =
             let bm = BS.inlinePerformIO (peekByteOff ptr l)
             in tip (l * wordSize) bm
-          | otherwise =
-            let !mid = l + ((r - l) `shiftR` 1)
-                !px  = l `shiftL` 3
-                !msk = branchMask px (mid `shiftL` 3)
-            in bin  px msk (goTree l mid) $! (goTree mid r)
 
-        goBytes :: Int -> IntSet -> IntSet
-        goBytes !x !s | x == len = s
-        goBytes  _  _ = error "not implemented"
+          | otherwise = goBytes l r empty
+-}
+        -- normally this loop should run only at the mostleft region of bitmap
+        -- note that the left index is not necessary multiple of a word size
 
--- TODO split by 0 before building bytestring, such that we throw away negative ints
-
-toBuilder :: IntSet -> Builder
-toBuilder = snd . go 0
+foldrWord :: Int -> (Int -> a -> a) -> a -> Word8 -> a
+foldrWord p f acc bm = go 0
   where
-    indent n p = BS.byteString $ BS.replicate (div (p - n) 8) 0
+    go i
+      |    i == 8    = acc
+      | testBit bm i = f (p + i) (go (succ i))
+      |   otherwise  = go (succ i)
 
-    -- TODO check for negative
---    go n (Bin _ _ Nil r) -- etc
+-- | Pack 'IntSet' as bitmap to the bytestring builder.
+--
+--   NOTE: negative elements are ignored!
+--
+toBuilder :: IntSet -> Builder
+toBuilder = snd . go 0 . splitGT (-1)
+  where
+    wordSize = sizeOf (0 :: Word)
+    indent n p = BS.byteString $ BS.replicate bsize 0
+      where
+        bsize = (p - n) `div` 8
+
+    -- TODO trim last zeroed bytes
+    -- TODO perform CPS transformation
     go n (Bin _ _ l r) = let (n',  bl) = go n l
                              (n'', br) = go n' r
                          in (n'', bl <> br)
-    go n (Tip p bm)    = (p + 8, indent n p <> BS.word64LE (fromIntegral bm))
-    go n (Fin p m)     = (p + m, indent n p <>
-                                 BS.byteString (BS.replicate (div m 8) 255))
-    go _  Nil          = (0, BS.byteString "")
+    go n (Tip p bm)    = (p + wordSize * 8
+                         , indent n p <> wordLE (fromIntegral bm)
+                         )
+      where
+#if WORD_SIZE_IN_BITS == 64
+        wordLE = BS.word64LE
+#elif WORD_SIZE_IN_BITS == 32
+        wordLE = BS.word32LE
+#else
+#error Unsupported platform
+#endif
 
+    go n (Fin p m)     = ( p + m
+                         , indent n p <> BS.byteString (BS.replicate bsize 255)
+                         )
+      where -- INVARIANT m is always multiple of 8
+        bsize = div m 8
+
+    go n  Nil          = (n, BS.byteString "")
+
+-- | Pack the 'IntSet' as bitmap to the lazy bytestring.
+--
+--   NOTE: you should prefer 'toLazyByteString' over 'toByteString'.
+--
+--   NOTE: negative elements are ignored!
+--
 toLazyByteString :: IntSet -> BSL.ByteString
 toLazyByteString = BS.toLazyByteString . toBuilder
 {-# INLINE toLazyByteString #-}
 
+-- | Pack the 'IntSet' as bitmap to the strict bytestring.
+--
+--   NOTE: negative elements are ignored!
+--
 toByteString :: IntSet -> ByteString
 toByteString = BSL.toStrict . toLazyByteString
 {-# INLINE toByteString #-}

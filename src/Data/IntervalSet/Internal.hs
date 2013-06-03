@@ -510,7 +510,7 @@ properSubsetOf p1 m1 p2 m2 = (m2 `shorter` m1) && match p1 p2 (finMask m2)
 {-# INLINE properSubsetOf #-}
 
 unionBM :: Prefix -> BitMap -> IntSet -> IntSet
-unionBM p bm t = case tip p bm of
+unionBM !p !bm !t = case tip p bm of
   Bin _ _ _ _ -> error "unionBM: impossible"
   Fin p' m'   -> insertFin p' m' t
   Tip p' bm'  -> insertBM p' bm' t

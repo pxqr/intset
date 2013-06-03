@@ -68,13 +68,22 @@ main = defaultMain $
     bench "toList/50K" $ nf SB.toList s
 
   , let !bs = B.replicate 10000 255 in
-    bench "fromByteString/10K-O" $ whnf Main.fromByteString bs
+    bench "bitmap/from-10K-O" $ whnf Main.fromByteString bs
 
-  , let !bs = B.replicate 1048576 255 in
-    bench "fromByteString/8M-S-dense" $ whnf SB.fromByteString bs
+  , let !bs = B.replicate (2 ^ (17 :: Int)) 0 in
+    bench "bitmap/from-1M-S-empty" $ whnf SB.fromByteString bs
 
-  , let !bs = B.replicate 1048576 0 in
-    bench "fromByteString/8M-S-empty" $ whnf SB.fromByteString bs
+  , let !bs = B.replicate (2 ^ (17 :: Int)) 1 in
+    bench "bitmap/from-1M-S-dense" $ whnf SB.fromByteString bs
+
+  , let !bs = B.replicate (2 ^ (17 :: Int)) 255 in
+    bench "bitmap/from-1M-S-buddy" $ whnf SB.fromByteString bs
+
+  , let !s = SB.fromList [0, 2 .. 1000000 * 2] in
+    bench "bitmap/to-1M-S-dense" $ nf SB.toLazyByteString s
+
+  , let !s = interval 0 100000000 in
+    bench "bitmap/to-100M-S-buddy" $ nf SB.toLazyByteString s
 
   , let !s = S.fromList [0..1000000] in
     bench "member/1M" $ nf (L.all (`S.member` s)) [50000..100000]
