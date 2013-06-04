@@ -93,9 +93,13 @@ module Data.IntervalSet
        , difference
 
          -- * Conversion
-         -- ** Lists
+         -- *** Arbitary
        , elems
        , toList, fromList
+
+         -- *** Ordered
+       , toAscList, toDescList
+       , fromAscList
 
 #if defined (TESTING)
          -- * Debug

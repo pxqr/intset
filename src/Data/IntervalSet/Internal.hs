@@ -70,8 +70,16 @@ module Data.IntervalSet.Internal
 
          -- * Conversion
          -- ** Lists
+         -- *** Arbitary
        , elems
        , toList, fromList
+
+         -- *** Ordered
+       , toAscList, toDescList
+       , fromAscList
+
+         --  TODO conversion to bitmap
+         -- ** Bitmap
 
          -- do not export this in Data.IntervalSet
          -- * Internal
@@ -1064,6 +1072,29 @@ toList = Data.IntervalSet.Internal.foldr (:) []
 elems :: IntSet -> [Key]
 elems = toList
 {-# INLINE elems #-}
+
+{--------------------------------------------------------------------
+  List/Ordered
+--------------------------------------------------------------------}
+
+-- | /O(n)/.
+--  Convert the set to a list of its element in ascending order.
+toAscList :: IntSet -> [Key]
+toAscList = toList
+{-# INLINE toAscList #-}
+
+-- TODO make it faster
+-- | /O(n)/.
+--  Convert the set to a list of its element in descending order.
+toDescList :: IntSet -> [Key]
+toDescList = reverse . toAscList
+{-# INLINE toDescList #-}
+
+-- TODO make it faster
+-- | Build a set from an ascending list of elements.
+fromAscList :: [Key] -> IntSet
+fromAscList = fromList
+{-# INLINE fromAscList #-}
 
 {--------------------------------------------------------------------
   Smart constructors
