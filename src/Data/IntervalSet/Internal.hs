@@ -51,6 +51,7 @@ module Data.IntervalSet.Internal
 
          -- * Splits
        , split, splitGT, splitLT
+       , partition
 
          -- * Min/Max
        , findMin, findMax
@@ -819,11 +820,25 @@ splitBMLT !px !tbm = root
   Partition
 --------------------------------------------------------------------}
 
+-- | /O(n)/. Split a set using given predicate.
+--
+--  > forall f. fst . partition f = filter f
+--  > forall f. snd . partition f = filter (not . f)
+--
 partition :: (Key -> Bool) -> IntSet -> (IntSet, IntSet)
 partition f = unStrict . go
   where
-    go (Tip _ _) = undefined
-    go  Nil      = Nil :*: Nil
+    -- TODO use where clauses
+    go (Bin p m l r) = let ll :*: lr = go l
+                           rl :*: rr = go r
+    -- in both cases we could have Nil and Fin
+                       in bin p m ll rl :*: bin p m lr rr
+    go (Tip p bm) = let bm' = filterBitMap p f bm
+    -- in both cases we could have Nil and Fin
+                    in  tip p bm' :*: tip p (bm' `xor` bm)
+    go (Fin p m)  = let (l, r) = L.partition f (listFin p m)
+                    in fromList l :*: fromList r
+    go  Nil       = Nil :*: Nil
 
 {--------------------------------------------------------------------
   Min/max
@@ -1149,6 +1164,7 @@ putRaw = putStrLn . showRaw
 {--------------------------------------------------------------------
   Misc
 --------------------------------------------------------------------}
+
 foldrBits :: Int -> (Int -> a -> a) -> a -> BitMap -> a
 foldrBits p f acc bm = go 0
   where
@@ -1157,6 +1173,14 @@ foldrBits p f acc bm = go 0
       |       testBit bm i     = f (p + i) (go (succ i))
       |         otherwise      = go (succ i)
 
+filterBitMap :: Prefix -> (Key -> Bool) -> BitMap -> BitMap
+filterBitMap px f bm = go 0 0
+  where
+    go !i !acc
+      |   i == WORD_SIZE_IN_BITS   = acc
+      | testBit bm i && f (px + i) = go (succ i) (bitmapOfSuffix i .|. acc)
+      |           otherwise        = go (succ i) acc
+{-# INLINE filterBitMap #-}
 
 isFull :: BitMap -> Bool
 isFull x = x == Bits.complement 0

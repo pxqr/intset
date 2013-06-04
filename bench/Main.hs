@@ -95,11 +95,17 @@ main = defaultMain $
   [ splitBenchs
   , splitGTBenchs
   , splitLTBenchs
+
+  , partBenchs
+
   , mergeTempl S.union        SB.union        "union"
   , mergeTempl S.intersection SB.intersection "intersection"
   , mergeTempl S.difference   SB.difference   "difference"
   ]
 
+partBenchs :: [Benchmark]
+partBenchs = complexBench "partition" 10000 (snd . S.partition even)
+             (snd . SB.partition even)
 
 splitBenchs :: [Benchmark]
 splitBenchs = complexBench "split" 1000000 (chunk S.split) (chunk SB.split)

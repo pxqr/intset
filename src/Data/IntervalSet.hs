@@ -75,6 +75,7 @@ module Data.IntervalSet
 
          -- * Splits
        , split, splitGT, splitLT
+       , partition
 
          -- * Min/Max
        , findMin, findMax

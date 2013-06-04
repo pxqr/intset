@@ -258,6 +258,10 @@ prop_bitmapEncode xs = fromByteString (toByteString xs') == xs'
   where -- we should restrict upper bound otherwise we might have out of memory
     xs' = splitGT (-1) $ splitLT 1000000 xs
 
+prop_partition :: IntSet -> Bool
+prop_partition s = fst (S.partition even s) == S.filter even s
+               &&  snd (S.partition even s) == S.filter (not . even) s
+
 main :: IO ()
 main = defaultMain
   [ testProperty "empty"                prop_empty
@@ -327,6 +331,7 @@ main = defaultMain
   , testProperty "split intersection"        prop_splitIntersect
   , testProperty "split greater than"        prop_splitGT
   , testProperty "split lesser  than"        prop_splitLT
+  , testProperty "partition filter"          prop_partition
 
   , testProperty "min"                  prop_min
   , testProperty "valid"                prop_valid
