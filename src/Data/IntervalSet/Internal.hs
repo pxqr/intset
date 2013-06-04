@@ -27,10 +27,16 @@ module Data.IntervalSet.Internal
          IntSet(..), Key
 
          -- * Query
+         -- ** Cardinality
        , Data.IntervalSet.Internal.null
        , size
+
+         -- ** Membership
        , member, notMember
-       , isSubsetOf
+
+         -- ** Inclusion
+       , isSubsetOf, isSupersetOf
+       , isProperSubsetOf, isProperSupersetOf
 
          -- * Construction
        , empty
@@ -45,7 +51,7 @@ module Data.IntervalSet.Internal
        , insert
        , delete
 
-         -- * Map/Fold/Filter
+         -- * Map & Fold & Filter
        , Data.IntervalSet.Internal.map
        , Data.IntervalSet.Internal.foldr
        , Data.IntervalSet.Internal.filter
@@ -314,8 +320,8 @@ notMember !x = not . member x
   Query/Inclusion
 --------------------------------------------------------------------}
 
--- | /O(n + m)/ or /O(1)/. Test if the first set is subset of the
--- other set.
+-- | /O(n + m)/ or /O(1)/. Test if the second set contain each element
+-- of the first.
 isSubsetOf :: IntSet -> IntSet -> Bool
 isSubsetOf t1@(Bin p1 m1 l1 r1) (Bin p2 m2 l2 r2)
   | m1 `shorter` m2 = False
@@ -359,6 +365,24 @@ isSubsetOfBM :: BitMap -> BitMap -> Bool
 isSubsetOfBM bm1 bm2 = bm1 .|. bm2 == bm2
 {-# INLINE isSubsetOfBM #-}
 
+
+-- | /O(n + m)/ or /O(1)/. Test if the second set is subset of the
+-- first.
+isSupersetOf :: IntSet -> IntSet -> Bool
+isSupersetOf = flip isSubsetOf
+{-# INLINE isSupersetOf #-}
+
+-- | /O(n + m)/ or /O(1)/. Test if the first set is proper subset of
+-- the other.
+isProperSubsetOf :: IntSet -> IntSet -> Bool
+isProperSubsetOf = error "isProperSubsetOf"
+
+-- | /O(n + m)/ or /O(1)/. Test if the second set is proper subset of
+-- the first.
+isProperSupersetOf :: IntSet -> IntSet -> Bool
+isProperSupersetOf = flip isProperSubsetOf
+{-# INLINE isProperSupersetOf #-}
+
 {--------------------------------------------------------------------
   Construction
 --------------------------------------------------------------------}
@@ -374,7 +398,7 @@ singleton x = Tip (prefixOf x) (bitmapOf x)
 {-# INLINE singleton #-}
 
 -- TODO make it faster
--- | /O(min(W, n))/. Set containing elements from the specified range.
+-- | /O(n)/. Set containing elements from the specified range.
 --
 --  > interval a b = fromList [a..b]
 --
@@ -472,6 +496,7 @@ Therefore this function should be used only when we sure we delete at
 least one element from the tree later.
 -}
 
+-- | Chunk fin to buddies or to single tip in the end.
 splitFin :: Prefix -> Mask -> IntSet
 splitFin p m
   -- WARN here we have inconsistency - bitmap is full
@@ -497,14 +522,12 @@ complement _   = error "complement: not implemented"
 
 infixl 6 `union`
 
--- | /O(n + m)/ or /O(1)/. The union of two sets.
+-- | /O(n + m)/ or /O(1)/. Find set which contains elements of both
+-- right and left sets.
 union :: IntSet -> IntSet -> IntSet
 union t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
-
     | shorter m1 m2 = leftiest
-
     | shorter m2 m1 = rightiest
-
     | p1 == p2      = binI p1 m1 (union l1 l2) (union r1 r2)
     | otherwise     = join p1 t1 p2 t2
   where
@@ -546,19 +569,20 @@ insertFin p1 m1 (Fin p2 m2 ) -- TODO simplify
 
 insertFin p m Nil = Fin p m
 
--- | The union of list of sets.
+-- | /O(max(n)^2 * spine)/ or /O(spine)/.
+--   The union of list of sets.
 unions :: [IntSet] -> IntSet
 unions = L.foldl' union empty
 
 
 -- test if the two Fins is good to merge
 isBuddy :: Prefix -> Mask -> Prefix -> Mask -> Bool
-isBuddy p1 m1 p2 m2 = m1 == m2 && xor p1 p2 == m1 && p1 .&. m1 == 0
+isBuddy !p1 !m1 !p2 !m2 = m1 == m2 && xor p1 p2 == m1 && p1 .&. m1 == 0
 {-# INLINE isBuddy #-}
 
 -- used to if one Fin is subset of the another Fin
 properSubsetOf :: Prefix -> Mask -> Prefix -> Mask -> Bool
-properSubsetOf p1 m1 p2 m2 = (m2 `shorter` m1) && match p1 p2 (finMask m2)
+properSubsetOf !p1 !m1 !p2 !m2 = (m2 `shorter` m1) && match p1 p2 (finMask m2)
 {-# INLINE properSubsetOf #-}
 
 unionBM :: Prefix -> BitMap -> IntSet -> IntSet
@@ -574,7 +598,8 @@ unionBM !p !bm !t = case tip p bm of
 
 infixl 7 `intersection`
 
--- | /O(n + m)/ or /O(1)/. The intersection of two sets.
+-- | /O(n + m)/ or /O(1)/. Find maximal common subset of the two given
+-- sets.
 intersection :: IntSet -> IntSet -> IntSet
 intersection t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
     | m1 `shorter` m2 = leftiest
@@ -645,7 +670,8 @@ intersectBM p1 bm1 (Fin p2 m2)
 
 intersectBM _  _    Nil        = Nil
 
-
+-- | /O(max(n) * spine)/ or /O(spine)/.
+--   Find out common subset of the list of sets.
 intersections :: [IntSet] -> IntSet
 intersections = L.foldl' intersection empty
 
@@ -1032,6 +1058,7 @@ fromList = L.foldl' (flip insert) empty
 toList :: IntSet -> [Key]
 toList = Data.IntervalSet.Internal.foldr (:) []
 {-# NOINLINE [3] toList #-}
+
 
 -- | 'elems' is alias to 'toList' for compatibility.
 elems :: IntSet -> [Key]

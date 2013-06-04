@@ -51,10 +51,16 @@ module Data.IntervalSet
          IntSet(..), Key
 
          -- * Query
+         -- ** Cardinality
        , SB.null
        , size
+
+         -- ** Membership
        , member, notMember
-       , isSubsetOf
+
+         -- ** Inclusion
+       , isSubsetOf, isSupersetOf
+       , isProperSubsetOf, isProperSupersetOf
 
          -- * Construction
        , empty
@@ -69,7 +75,7 @@ module Data.IntervalSet
        , insert
        , delete
 
-         -- * Map/Fold/Filter
+         -- * Map Fold Filter
        , SB.map
        , SB.foldr
        , SB.filter
