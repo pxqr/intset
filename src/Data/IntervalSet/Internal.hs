@@ -772,6 +772,7 @@ difference     Nil              _              = Nil
 
 -- i can see some useful use of difference applied to fold
 
+-- TODO make it faster
 -- | /O(n + m)/ or /O(1)/. Find symmetric difference of the two sets:
 --   resulting set containts elements that either in first or second
 --   set, but not in both simultaneous.

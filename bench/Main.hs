@@ -194,7 +194,7 @@ mergeTempl sop bop n =
     bench (n ++ "/S-10K-sparse-disjoint") $ whnf (uncurry bop) (a, b)
 
   , let (!a, !b) = (SB.fromList [0,64..10000 * 64], SB.fromList [0,64..10000 * 64]) in
-    bench (n ++ "/S-10K-sparse-overlap") $ whnf (uncurry bop) (a, b)
+     bench (n ++ "/S-10K-sparse-overlap") $ whnf (uncurry bop) (a, b)
 
   , let (!a, !b) = (S.fromList [0,2..500000 * 2], S.fromList [1,3..500000 * 2]) in
     bench (n ++ "/O-500K-dense-disjoint")  $ whnf (uncurry sop) (a, b)

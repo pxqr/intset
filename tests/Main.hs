@@ -267,6 +267,27 @@ prop_subsetSize a b
   | a `isSubsetOf` b = size a <= size b
   |     otherwise    = True
 
+prop_supersetSize :: IntSet -> IntSet -> Bool
+prop_supersetSize a b
+  | a `isSupersetOf` b = size a >= size b
+  |    otherwise       = True
+
+prop_subsetSuperset :: IntSet -> IntSet -> Bool
+prop_subsetSuperset a b = (a `isSubsetOf` b) || (b `isSubsetOf` a)
+                          || not (S.null (symDiff a b))
+
+prop_subsetIntersection :: IntSet -> IntSet -> Bool
+prop_subsetIntersection a b = (i `isSubsetOf` a) && (i `isSubsetOf` b)
+  where
+    i = a * b
+
+prop_subsetUnion :: IntSet -> IntSet -> Bool
+prop_subsetUnion a b = (a `isSubsetOf` u) && (b `isSubsetOf` u)
+  where
+    u = a + b
+
+
+
 main :: IO ()
 main = defaultMain
   [ testProperty "empty"                prop_empty
@@ -277,6 +298,10 @@ main = defaultMain
   , testProperty "interval"             prop_interval
 
   , testProperty "subset size"          prop_subsetSize
+  , testProperty "superset size"        prop_supersetSize
+  , testProperty "subset superset exclusion"  prop_subsetSuperset
+  , testProperty "subset of intersection"     prop_subsetIntersection
+  , testProperty "subset of union"            prop_subsetUnion
 
   , testProperty "bitmap_encode"        prop_bitmapEncode
 
