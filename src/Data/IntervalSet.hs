@@ -90,7 +90,7 @@ module Data.IntervalSet
          -- * Combine
        , union, unions
        , intersection, intersections
-       , difference
+       , difference, symDiff
 
          -- * Conversion
          -- *** Arbitary

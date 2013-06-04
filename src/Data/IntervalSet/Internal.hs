@@ -66,7 +66,7 @@ module Data.IntervalSet.Internal
          -- * Combine
        , union, unions
        , intersection, intersections
-       , difference
+       , difference, symDiff
 
          -- * Conversion
          -- ** Lists
@@ -353,7 +353,7 @@ isSubsetOf t1@(Tip p1 _   )    (Bin p2 m2 l r)
 isSubsetOf    (Tip p1 bm1)     (Tip p2 bm2)
   = p1 == p2 && isSubsetOfBM bm1 bm2
 
-isSubsetOf    (Tip _  _  )     (Fin _  _  ) = False
+isSubsetOf    (Tip p1 _  )     (Fin p2 m2 ) = match p1 p2 (finMask m2)
 isSubsetOf    (Tip _  _  )      Nil         = False
 isSubsetOf t1@(Fin p1 m1 )     (Bin p2 m2 l r)
   | finMask m1 `shorterEq` m2 = False
@@ -769,6 +769,16 @@ difference t1@(Fin p1 m1)   t2@(Fin p2 m2)
 
 difference t1@(Fin _ _)         Nil            = t1
 difference     Nil              _              = Nil
+
+-- i can see some useful use of difference applied to fold
+
+-- | /O(n + m)/ or /O(1)/. Find symmetric difference of the two sets:
+--   resulting set containts elements that either in first or second
+--   set, but not in both simultaneous.
+--
+symDiff :: IntSet -> IntSet -> IntSet
+symDiff a b = (a `union` b) `difference` (a `intersection` b)
+{-# INLINE symDiff #-}
 
 {--------------------------------------------------------------------
   Strict Pair
