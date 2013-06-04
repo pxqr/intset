@@ -112,6 +112,7 @@ module Data.IntervalSet.Internal
          -- *** Visualization
        , showTree, showRaw
        , putTree, putRaw
+       , symDiff'
        ) where
 
 
@@ -275,6 +276,7 @@ instance Num IntSet where
   (+) = union
   (*) = intersection
   (-) = difference
+
   negate = Data.IntervalSet.Internal.complement
   abs = error "IntervalSet.abs: not implemented"
   signum = error "IntervalSet.singum: not implemented"
@@ -811,16 +813,102 @@ difference t1@(Fin p1 m1)   t2@(Fin p2 m2)
 difference t1@(Fin _ _)         Nil            = t1
 difference     Nil              _              = Nil
 
--- i can see some useful use of difference applied to fold
+-- i can't see some useful use of difference applied to fold
 
--- TODO make it faster
+{--------------------------------------------------------------------
+  Symmetric difference
+--------------------------------------------------------------------}
+
 -- | /O(n + m)/ or /O(1)/. Find symmetric difference of the two sets:
 --   resulting set containts elements that either in first or second
 --   set, but not in both simultaneous.
 --
-symDiff :: IntSet -> IntSet -> IntSet
-symDiff a b = (a `union` b) `difference` (a `intersection` b)
+
+symDiff' :: IntSet -> IntSet -> IntSet
+symDiff' a b = (a `union` b) `difference` (a `intersection` b)
 {-# INLINE symDiff #-}
+
+
+symDiff :: IntSet -> IntSet -> IntSet
+symDiff t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
+    | m1 `shorter` m2 = leftiest
+    | m2 `shorter` m1 = rightiest
+    |    p1 == p2     = bin  p1 m1 (symDiff l1 l2) (symDiff r1 r2)
+    |   otherwise     = join p1 t1 p2 t2
+  where
+    leftiest
+      | nomatch p2 p1 m1 = join p1 t1 p2 t2
+      |    zero p2 m1    = bin  p1 m1 (symDiff l1 t2) r1 -- TODO tune (symDiff l1 t2)
+      |    otherwise     = bin  p1 m1 l1 (symDiff r1 t2)
+
+    rightiest
+      | nomatch p1 p2 m2 = join p2 t2 p1 t1
+      |    zero p1 m2    = bin  p2 m2 (symDiff l2 t1) r2 -- TODO tune (symDiff l1 t2)
+      |    otherwise     = bin  p2 m2 l2 (symDiff r2 t1)
+
+symDiff t1@(Bin _  _   _ _)    (Tip p2 bm2    ) = symDiffTip p2 bm2 t1
+symDiff t1@(Bin _  _   _ _)    (Fin p2 m2     ) = symDiffFin p2 m2  t1
+symDiff t1@(Bin _  _   _ _)     Nil             = t1
+symDiff    (Tip p1 bm1    ) t2                  = symDiffTip p1 bm1 t2
+symDiff    (Fin p1 m1     ) t2                  = symDiffFin p1 m1  t2
+symDiff     Nil             t2                  = t2
+
+
+-- INVARIANT p1 and bm1 should form a Tip, not a Nil or Fin!
+symDiffTip :: Prefix -> BitMap -> IntSet -> IntSet
+-- {-# INLINE symDiffTip #-}
+symDiffTip !p1 !bm1 = go
+  where
+    go t2@(Bin p2 m2 l r)
+      | nomatch p1 p2 m2 = join p1 (Tip p1 bm1) p2 t2
+      |    zero p1 m2    = bin  p2 m2 (symDiffTip p1 bm1 l) r -- not use go
+      |     otherwise    = bin  p2 m2 l (symDiffTip p1 bm1 r) -- not use go
+
+    go t2@(Tip p2 bm2)
+      |  p1 == p2 = tip p1 (bm1 `xor` bm2)
+      | otherwise = join p1 (Tip p1 bm1) p2 t2
+
+    go t2@(Fin p2 m2)
+      | nomatch p1 p2 (finMask m2) = join p1 (Tip p1 bm1) p2 t2
+      |         otherwise          = symDiffTip p1 bm1 (splitFin p2 m2)  -- not use go
+
+    go     Nil = Tip p1 bm1
+
+symDiffFin :: Prefix -> Mask -> IntSet -> IntSet
+symDiffFin !p1 !m1 = go
+  where
+    go t2@(Bin p2 m2 l r)
+      | finMask m1 `shorterEq` m2
+      = if match p2 p1 (finMask m1)
+        then symDiff (splitFin p1 m1) t2
+        else join p1 (Fin p1 m1) p2 t2
+
+      | otherwise = goDown -- TODO inline
+      where
+        goDown
+          | nomatch p1 p2 m2 = join p1 (Fin p1 m1) p2 t2
+          |    zero p1 m2    = bin p2 m2 (go l) r
+          |     otherwise    = bin p2 m2 l (go r)
+
+    go (Fin p2 m2 ) -- TODO try use compare m1 m2
+      | m1 `shorter` m2 = if match p2 p1 (finMask m1)
+                          then symDiffFin p2 m2 (splitFin p1 m1)
+                          else join p1 (Fin p1 m1) p2 (Fin p2 m2)
+
+      | m2 `shorter` m1 = if match p1 p2 (finMask m2)
+                          then symDiffFin p2 m2 (splitFin p1 m1)
+                          else join p1 (Fin p1 m1) p2 (Fin p2 m2)
+
+      |    p1 == p2     = Nil
+      -- here we have (m1 == m2 && p1 /= p1) and should check if Fin's are buddies
+      | xor p1 p2 == m1 = if p1 < p2
+                          then Fin p1 (m1 * 2)
+                          else Fin p2 (m1 * 2)
+
+      |    otherwise    = join p1 (Fin p1 m1) p2 (Fin p2 m2)
+
+    go (Tip p2 bm2)    = symDiffTip p2 bm2 (Fin p1 m1)
+    go  Nil            = Fin p1 m1
 
 {--------------------------------------------------------------------
   Strict Pair

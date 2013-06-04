@@ -101,7 +101,11 @@ main = defaultMain $
   , mergeTempl S.union        SB.union        "union"
   , mergeTempl S.intersection SB.intersection "intersection"
   , mergeTempl S.difference   SB.difference   "difference"
+  , mergeTempl   symDiff'     SB.symDiff      "symmetric-difference"
   ]
+
+symDiff' :: S.IntSet -> S.IntSet -> S.IntSet
+symDiff' a b = (a `S.union` b) `S.difference` (a `S.intersection` b)
 
 partBenchs :: [Benchmark]
 partBenchs = complexBench "partition" 10000 (snd . S.partition even)

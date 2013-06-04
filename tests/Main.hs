@@ -312,6 +312,11 @@ prop_symDiffInter :: IntSet -> IntSet -> Bool
 prop_symDiffInter a b = (a `union` b) `difference` (a `intersection` b)
   == symDiff a b
 
+prop_symDiffSizeBound :: IntSet -> IntSet -> Bool
+prop_symDiffSizeBound a b = size s <= size a + size b
+  where
+    s = symDiff a b
+
 main :: IO ()
 main = defaultMain
   [ testProperty "empty"                prop_empty
@@ -336,6 +341,7 @@ main = defaultMain
   , testProperty "symmetric difference distributive"  prop_symDiffDistr
   , testProperty "symmetric difference union"         prop_symDiffUnion
   , testProperty "symmetric difference intersection"  prop_symDiffInter
+  , testProperty "symmetric difference size upper bound" prop_symDiffSizeBound
 
 
 --  , testProperty "universe member"      prop_universeMember

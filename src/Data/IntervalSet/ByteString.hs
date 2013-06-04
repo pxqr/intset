@@ -126,7 +126,7 @@ toBuilder _s = go (splitGT (-1) _s) (\_ -> BS.byteString "") 0
 #else
 #error Unsupported platform
 #endif
-
+    -- TODO preallocate buffer and write
     -- TODO trim last zeroed bytes
     go :: IntSet -> (Int -> Builder) -> (Int -> Builder)
     go s c !n = case s of
