@@ -26,6 +26,9 @@ module Data.IntervalSet.Internal
          -- * Types
          IntSet(..), Key
 
+         -- * Monoids
+       , Union, Intersection, Difference
+
          -- * Query
          -- ** Cardinality
        , Data.IntervalSet.Internal.null
@@ -283,6 +286,41 @@ instance Bounded IntSet where
 
 instance NFData IntSet where
 
+{--------------------------------------------------------------------
+  Monoids
+--------------------------------------------------------------------}
+
+-- | Monoid under 'union'. Used by default for 'IntSet'.
+--
+--   You could use 'Sum' from 'Data.Monoid' as well.
+--
+newtype Union = Union { getUnion :: IntSet }
+
+instance Monoid Union where
+  mempty      = Union empty
+  mappend a b = Union (getUnion a `union` getUnion b)
+  mconcat     = Union . unions . L.map getUnion
+
+-- | Monoid under 'intersection'.
+--
+--   You could use 'Product' from 'Data.Monoid' as well.
+--
+newtype Intersection = Intersection { getIntersection :: IntSet }
+
+instance Monoid Intersection where
+  mempty      = Intersection universe
+  mappend a b = Intersection (getIntersection a `intersection` getIntersection b)
+  mconcat     = Intersection . intersections . L.map getIntersection
+
+-- | Monoid under 'symDiff'.
+--
+--   Don't mix up 'symDiff' with 'difference'.
+--
+newtype Difference = Difference { getDifference :: IntSet }
+
+instance Monoid Difference where
+  mempty      = Difference empty
+  mappend a b = Difference (getDifference a `symDiff` getDifference b)
 
 {--------------------------------------------------------------------
   Query

@@ -92,6 +92,9 @@ module Data.IntervalSet
        , intersection, intersections
        , difference, symDiff
 
+         -- ** Monoids
+       , Union, Intersection, Difference
+
          -- * Conversion
          -- *** Arbitary
        , elems
