@@ -287,6 +287,30 @@ prop_subsetUnion a b = (a `isSubsetOf` u) && (b `isSubsetOf` u)
     u = a + b
 
 
+prop_symDiffLeftNeutral :: IntSet -> Bool
+prop_symDiffLeftNeutral a = symDiff empty a == a
+
+prop_symDiffRightNeutral :: IntSet -> Bool
+prop_symDiffRightNeutral a = symDiff a empty == a
+
+prop_symDiffCommutative :: IntSet -> IntSet -> Bool
+prop_symDiffCommutative a b = (a `symDiff` b) == b `symDiff` a
+
+prop_symDiffAssociative :: IntSet -> IntSet -> IntSet -> Bool
+prop_symDiffAssociative a b c = ((a `symDiff` b) `symDiff` c)
+                             == (a `symDiff` (b `symDiff` c))
+
+prop_symDiffDistr :: IntSet -> IntSet -> IntSet -> Bool
+prop_symDiffDistr a b c = (a `intersection` (b  `symDiff` c))
+                       == ((a `intersection` b) `symDiff` (a `intersection` c))
+
+prop_symDiffUnion :: IntSet -> IntSet -> Bool
+prop_symDiffUnion a b = (a `difference` b) `union` (b `difference` a)
+                     == symDiff a b
+
+prop_symDiffInter :: IntSet -> IntSet -> Bool
+prop_symDiffInter a b = (a `union` b) `difference` (a `intersection` b)
+  == symDiff a b
 
 main :: IO ()
 main = defaultMain
@@ -304,6 +328,15 @@ main = defaultMain
   , testProperty "subset of union"            prop_subsetUnion
 
   , testProperty "bitmap_encode"        prop_bitmapEncode
+
+  , testProperty "symmetric difference left neutral"  prop_symDiffLeftNeutral
+  , testProperty "symmetric difference right neutral" prop_symDiffRightNeutral
+  , testProperty "symmetric difference commutative"   prop_symDiffCommutative
+  , testProperty "symmetric difference associative"   prop_symDiffAssociative
+  , testProperty "symmetric difference distributive"  prop_symDiffDistr
+  , testProperty "symmetric difference union"         prop_symDiffUnion
+  , testProperty "symmetric difference intersection"  prop_symDiffInter
+
 
 --  , testProperty "universe member"      prop_universeMember
 --  , testProperty "universe delete"      prop_universeDelete
