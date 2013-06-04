@@ -30,6 +30,7 @@ module Data.IntervalSet.Internal
        , Data.IntervalSet.Internal.null
        , size
        , member, notMember
+       , isSubsetOf
 
          -- * Construction
        , empty
@@ -307,6 +308,56 @@ member !x = go
 notMember :: Key -> IntSet -> Bool
 notMember !x = not . member x
 {-# INLINE notMember #-}
+
+
+{--------------------------------------------------------------------
+  Query/Inclusion
+--------------------------------------------------------------------}
+
+-- | /O(n + m)/ or /O(1)/. Test if the first set is subset of the
+-- other set.
+isSubsetOf :: IntSet -> IntSet -> Bool
+isSubsetOf t1@(Bin p1 m1 l1 r1) (Bin p2 m2 l2 r2)
+  | m1 `shorter` m2 = False
+  | m2 `shorter` m1 = match p1 p2 m2 && matchDown
+  |    otherwise    = p1 == p2 && isSubsetOf l1 l2 && isSubsetOf r1 r2
+  where
+    matchDown
+      | zero p1 m2 = isSubsetOf t1 l2
+      | otherwise  = isSubsetOf t1 r2
+
+isSubsetOf    (Bin _ _ _ _)      (Tip _  _ ) = False
+isSubsetOf    (Bin p1 m1 _ _)    (Fin p2 m2)
+  = finMask m2 `shorterEq` m1 && match p1 p2 (finMask m2)
+
+isSubsetOf    (Bin _ _ _ _)     Nil         = False
+isSubsetOf t1@(Tip p1 _   )    (Bin p2 m2 l r)
+  | nomatch p1 p2 m2 = False
+  |    zero p1 m2    = isSubsetOf t1 l
+  |    otherwise     = isSubsetOf t1 r
+
+isSubsetOf    (Tip p1 bm1)     (Tip p2 bm2)
+  = p1 == p2 && isSubsetOfBM bm1 bm2
+
+isSubsetOf    (Tip _  _  )     (Fin _  _  ) = False
+isSubsetOf    (Tip _  _  )      Nil         = False
+isSubsetOf t1@(Fin p1 m1 )     (Bin p2 m2 l r)
+  | finMask m1 `shorterEq` m2 = False
+  |      nomatch p1 p2 m2     = False
+  |         zero p1 m2        = isSubsetOf t1 l
+  |         otherwise         = isSubsetOf t1 r
+
+isSubsetOf    (Fin _  _  )     (Tip _  _ )   = False
+isSubsetOf    (Fin p1 m1 )     (Fin p2 m2)
+  = m2 `shorterEq` m1 && match p1 p2 (finMask m2)
+
+isSubsetOf    (Fin _  _  )      Nil          = False
+isSubsetOf     Nil              _            = True
+
+
+isSubsetOfBM :: BitMap -> BitMap -> Bool
+isSubsetOfBM bm1 bm2 = bm1 .|. bm2 == bm2
+{-# INLINE isSubsetOfBM #-}
 
 {--------------------------------------------------------------------
   Construction

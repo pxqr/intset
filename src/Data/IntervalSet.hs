@@ -54,6 +54,7 @@ module Data.IntervalSet
        , SB.null
        , size
        , member, notMember
+       , isSubsetOf
 
          -- * Construction
        , empty

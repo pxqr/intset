@@ -262,6 +262,11 @@ prop_partition :: IntSet -> Bool
 prop_partition s = fst (S.partition even s) == S.filter even s
                &&  snd (S.partition even s) == S.filter (not . even) s
 
+prop_subsetSize :: IntSet -> IntSet -> Bool
+prop_subsetSize a b
+  | a `isSubsetOf` b = size a <= size b
+  |     otherwise    = True
+
 main :: IO ()
 main = defaultMain
   [ testProperty "empty"                prop_empty
@@ -270,6 +275,8 @@ main = defaultMain
   , testProperty "insert delete"        prop_insertDelete
   , testProperty "compare"              prop_cmp
   , testProperty "interval"             prop_interval
+
+  , testProperty "subset size"          prop_subsetSize
 
   , testProperty "bitmap_encode"        prop_bitmapEncode
 
