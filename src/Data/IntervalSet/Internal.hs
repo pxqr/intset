@@ -295,6 +295,7 @@ instance NFData IntSet where
 --   You could use 'Sum' from 'Data.Monoid' as well.
 --
 newtype Union = Union { getUnion :: IntSet }
+                deriving (Show, Read, Eq, Ord)
 
 instance Monoid Union where
   mempty      = Union empty
@@ -306,6 +307,7 @@ instance Monoid Union where
 --   You could use 'Product' from 'Data.Monoid' as well.
 --
 newtype Intersection = Intersection { getIntersection :: IntSet }
+                       deriving (Show, Read, Eq, Ord)
 
 instance Monoid Intersection where
   mempty      = Intersection universe
@@ -317,6 +319,7 @@ instance Monoid Intersection where
 --   Don't mix up 'symDiff' with 'difference'.
 --
 newtype Difference = Difference { getDifference :: IntSet }
+                     deriving (Show, Read, Eq, Ord)
 
 instance Monoid Difference where
   mempty      = Difference empty
