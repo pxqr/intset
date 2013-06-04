@@ -1349,7 +1349,6 @@ branchMask p1 p2
   = intFromNat (highestBitMask (natFromInt p1 `xor` natFromInt p2))
 {-# INLINE branchMask #-}
 
--- make platform independent
 -- | Return a word where only the highest bit is set.
 highestBitMask :: Word -> Word
 highestBitMask x1 =
@@ -1358,18 +1357,12 @@ highestBitMask x1 =
       x4 = x3 .|. x3 `shiftR` 4
       x5 = x4 .|. x4 `shiftR` 8
       x6 = x5 .|. x5 `shiftR` 16
-{-
- #if !(defined(__GLASGOW_HASKELL__) && WORD_SIZE_IN_BITS==32)
--}
+#if WORD_SIZE_IN_BITS == 64
       x7 = x6 .|. x6 `shiftR` 32
   in x7 `xor` (x7 `shiftR` 1)
-{-
- #else
--}
---in x6 `xor` (x6 `shiftRL` 1)
-{-
-  #endif
--}
+#else
+  in x6 `xor` (x6 `shiftRL` 1)
+#endif
 {-# INLINE highestBitMask #-}
 
 {--------------------------------------------------------------------
