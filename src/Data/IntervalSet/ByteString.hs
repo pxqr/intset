@@ -3,7 +3,7 @@
 --   License     :  BSD3
 --   Maintainer  :  pxqr.sta@gmail.com
 --   Stability   :  experimental
---   Portability :  portable
+--   Portability :  little endian arch
 --
 --   Fast conversion from or to lazy and strict bytestrings.
 --   Serialized IntSets are represented as single continious bitmap.
@@ -15,23 +15,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Data.IntervalSet.ByteString
        ( fromByteString
-       , toByteString, toLazyByteString
-
-         -- * Extra
-       , toBuilder
+       , toByteString
        ) where
 
 import Data.Bits
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Internal as BS
-import           Data.ByteString.Builder  (Builder)
-import qualified Data.ByteString.Builder  as BS
-import qualified Data.ByteString.Lazy  as BSL
 import Foreign
-import Data.Monoid
 
-import Data.IntervalSet.Internal
+import Data.IntervalSet.Internal as S
 
 
 #if defined(__GLASGOW_HASKELL__)
@@ -68,6 +61,8 @@ fromByteString bs =
             go (x + wordSize) s
           | otherwise = goBytes x acc
 
+        -- normally this loop should run only at the mostleft region of bitmap
+        -- note that the left index is not necessary multiple of a word size
         goBytes :: Int -> IntSet -> IntSet
         goBytes !i !s
           |   i < len =
@@ -97,8 +92,6 @@ fromByteString bs =
 
           | otherwise = goBytes l r empty
 -}
-        -- normally this loop should run only at the mostleft region of bitmap
-        -- note that the left index is not necessary multiple of a word size
 
 foldrWord :: Int -> (Int -> a -> a) -> a -> Word8 -> a
 foldrWord p f acc bm = go 0
@@ -107,7 +100,7 @@ foldrWord p f acc bm = go 0
       |    i == 8    = acc
       | testBit bm i = f (p + i) (go (succ i))
       |   otherwise  = go (succ i)
-
+{-
 -- | Pack 'IntSet' as bitmap to the bytestring builder.
 --
 --   NOTE: negative elements are ignored!
@@ -148,11 +141,45 @@ toBuilder _s = go (splitGT (-1) _s) (\_ -> BS.byteString "") 0
 toLazyByteString :: IntSet -> BSL.ByteString
 toLazyByteString = BS.toLazyByteString . toBuilder
 {-# INLINE toLazyByteString #-}
-
+-}
 -- | Pack the 'IntSet' as bitmap to the strict bytestring.
 --
 --   NOTE: negative elements are ignored!
 --
 toByteString :: IntSet -> ByteString
-toByteString = BSL.toStrict . toLazyByteString
-{-# INLINE toByteString #-}
+toByteString snp =
+    let s        = splitGT (-1) snp
+        maxEl    = if S.null snp then 0 else findMax s + 1
+        sizeWord = wordSize maxEl
+        sizeByte = byteSize maxEl
+    in BS.take sizeByte $ do
+       BS.unsafeCreate (sizeWord * sizeOf (undefined :: BitMap))
+                       (`start` s) -- createAndTrim
+  where
+    wordSize x = (x `div` WORD_SIZE_IN_BITS) +
+                 if (x `mod` WORD_SIZE_IN_BITS) == 0 then 0 else 1
+    byteSize x = (x `div` 8)  + if (x `mod` 8)  == 0 then 0 else 1
+
+    indent :: Ptr Word8 -> Int -> Int -> IO ()
+    indent ptr n p = void $ BS.memset (ptr `plusPtr` (shiftR n 3)) 0
+                                      (fromIntegral  (shiftR (p - n) 3))
+    {-# INLINE indent #-}
+
+    start :: Ptr Word8 -> IntSet -> IO ()
+    start ptr s = void $ write s 0
+      where
+        write :: IntSet -> Int -> IO Int
+        write s' !n = case s' of
+          Bin _ _ l r -> write l n >>= write r
+          Tip p bm    -> do
+            indent ptr n p
+            pokeByteOff ptr (p `shiftR` 3) bm
+            return (p + WORD_SIZE_IN_BITS)
+
+          Fin p m     -> do
+            indent ptr n p
+            _ <- BS.memset (ptr `advancePtr` shiftR p 3) 255
+                           (fromIntegral    (shiftR m 3))
+            return (p + m)
+
+          Nil         -> return n

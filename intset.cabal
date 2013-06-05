@@ -47,7 +47,7 @@ library
   other-modules:       Data.IntervalSet.Internal
   build-depends:       base == 4.*
                      , bits-extras >= 0.1.2
-                     , bytestring  >= 0.10.2
+                     , bytestring
                      , deepseq
 
   hs-source-dirs:      src
