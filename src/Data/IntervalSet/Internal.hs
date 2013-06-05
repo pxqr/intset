@@ -97,8 +97,9 @@ module Data.IntervalSet.Internal
        , unionBM
 
          -- ** Debug
-       , shorter, prefixOf, bitmapOf, branchMask, matchFin, splitFin
-       , finSubsetOf
+--       , shorter, prefixOf, bitmapOf, branchMask, matchFin,
+--       , finSubsetOf
+       , splitFin
 
          -- *** Stats
        , binCount, tipCount, finCount
@@ -1100,18 +1101,17 @@ findMax (Bin _ rootM l r)
     | rootM < 0 = go l
     | otherwise = go r
   where
-    go (Bin _ _ child _) = go child
-    go (Tip p bm)        = p + findMaxBM bm
-    go (Fin p m)         = p + m - 1
-    go  Nil              = error "findMax.go: Bin Nil invariant failed"
+    go (Bin _ _ _ ri) = go ri
+    go (Tip p bm)     = p + findMaxBM bm
+    go (Fin p m)      = p + m - 1
+    go  Nil           = error "findMax.go: Bin Nil invariant failed"
 
 findMax (Tip p bm) = p + findMaxBM bm
 findMax (Fin p m ) = p + m - 1
 findMax  Nil       = error "findMax: empty set"
 
--- TODO implement findMaxBM
 findMaxBM :: BitMap -> Int
-findMaxBM = error "findMaxBM"  --fromIntegral . leadingZeros
+findMaxBM x = fromIntegral ((WORD_SIZE_IN_BITS - 1) - leadingZeros x)
 {-# INLINE findMaxBM #-}
 
 {--------------------------------------------------------------------

@@ -184,6 +184,21 @@ prop_minInSet s
   |  S.null s = True
   | otherwise = member (findMin s) s
 
+prop_minIsTheLess :: IntSet -> Bool
+prop_minIsTheLess s
+  | S.null s  = True
+  | otherwise = all (findMin s <=) (toList s)
+
+prop_maxInSet :: IntSet -> Bool
+prop_maxInSet s
+  |  S.null s = True
+  | otherwise = member (findMax s) s
+
+prop_maxIsTheGreatest :: IntSet -> Bool
+prop_maxIsTheGreatest s
+  |  S.null s = True
+  | otherwise = all (<= findMax s) (toList s)
+
 prop_differenceMember :: IntSet -> IntSet -> Bool
 prop_differenceMember a b = all (`notMember` difference a b) (toList b)
 
@@ -380,7 +395,11 @@ main = defaultMain
   , testProperty "union top"            prop_unionTop
   , testProperty "union idemp"          prop_unionIdemp
 
-  , testProperty "minima in set"        prop_minInSet
+  , testProperty "minimal in set"        prop_minInSet
+  , testProperty "maximal in set"        prop_maxInSet
+  , testProperty "minimal is the less"   prop_minIsTheLess
+  , testProperty "maximal is the greatest" prop_maxIsTheGreatest
+
 
   , testProperty "intersection size"         prop_intersectionSize
   , testProperty "intersection lists"        prop_intersection
