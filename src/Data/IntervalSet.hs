@@ -13,21 +13,21 @@
 --     * Fast Mergeable Integer Maps (1998) by Chris Okasaki, Andrew Gill
 --       <http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.37.5452>
 --
---   This implementation is pretty similar to Data.IntSet from
---   containers package. It's expected that Data.IntSet.Buddy will be
---   slightly slower in randomized settings (e.g. fromList
---   [1,3..1000000]) but much faster when we have long sequences
---   (e.g. [1..100000]) up to constant time at many main operations
---   not depending on a set size.
+--   This implementation performs espessially well then set contains
+--   long integer invervals like @[0..2047]@ that are just merged into
+--   one interval description. This allow to perform many operations
+--   in constant time and space. However if set contain sparse
+--   integers like @[1,12,7908,234,897]@ the same operations will take
+--   /O(min(W, n))/ which is good enough in most cases.
 --
 --   Conventions in complexity notation:
 --
---     * n - number of elements in a set;
+--     * n — number of elements in a set;
 --
---     * W - number bits in a 'Key'. This is 32 at 32 bit platforms
---     and 64 at 64 bit platforms;
+--     * W — number bits in a 'Key'. This is 32 or 64 at 32 and 64 bit
+--     platforms respectively;
 --
---     * O(n) or O(k) means this operation have complexity O(n) in
+--     * O(n) or O(k) — means this operation have complexity O(n) in
 --     worst case (e.g. sparse set) or O(k) in best case (e.g. one
 --     single interval).
 --

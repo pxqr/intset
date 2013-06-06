@@ -15,30 +15,23 @@ description:
 
    This library provides persistent, time and space efficient integer
    sets implemented as dense big-endian patricia trees with buddy
-   suffixes compaction.
-
-   This implementation performs espessially well then set contains
-   long integer invervals like [0..2047] that just merged into one
-   interval description. This allow to perform many operations in
-   constant time and space. However if set contain sparse integers
-   like [1,12,7908,234,897] the same operations will take O(min(W, n))
-   which is good enough in most cases.
-
-   In randomized settings this structure expected to be as fast as
-   Data.IntSet from containers.
+   suffixes compaction. In randomized settings this structure expected
+   to be as fast as Data.IntSet from containers, but if a sets is
+   likely to have long continuous intervals it should be much faster.
 
 
-extra-source-files:    README.md .travis.yml
+extra-source-files:    README.md
+                       .travis.yml
 
 
 source-repository head
   type:                git
-  location:            https://github.com/pxqr/intset.git
+  location:            git://github.com/pxqr/intset.git
 
 
 flag testing
-  description:        Enable testing stuff and expose internals.
-  default:            False
+  description:         Enable testing stuff and expose internals.
+  default:             False
 
 
 library
@@ -70,6 +63,7 @@ test-suite properties
   if !flag(testing)
       buildable:       False
 
+
 test-suite fusion
   type:                exitcode-stdio-1.0
   main-is:             Fusion.hs
@@ -79,6 +73,7 @@ test-suite fusion
   -- to avoid -ddump-simpl-stats output
   if !flag(testing)
       buildable:       False
+
 
 benchmark benchmarks
   type:                exitcode-stdio-1.0
@@ -90,9 +85,7 @@ benchmark benchmarks
                      , criterion
                      , deepseq
                      , intset
-
   ghc-options:         -O3 -Wall -fno-warn-orphans
 --  -fllvm
-
   if !flag(testing)
       buildable:       False

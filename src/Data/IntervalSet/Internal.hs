@@ -427,7 +427,7 @@ isSupersetOf = flip isSubsetOf
 -- | /O(n + m)/ or /O(1)/. Test if the first set is proper subset of
 -- the other.
 isProperSubsetOf :: IntSet -> IntSet -> Bool
-isProperSubsetOf = error "isProperSubsetOf"
+isProperSubsetOf = error "isProper subset of"
 
 -- | /O(n + m)/ or /O(1)/. Test if the second set is proper subset of
 -- the first.
@@ -820,16 +820,15 @@ difference     Nil              _              = Nil
   Symmetric difference
 --------------------------------------------------------------------}
 
--- | /O(n + m)/ or /O(1)/. Find symmetric difference of the two sets:
---   resulting set containts elements that either in first or second
---   set, but not in both simultaneous.
---
 
 symDiff' :: IntSet -> IntSet -> IntSet
 symDiff' a b = (a `union` b) `difference` (a `intersection` b)
 {-# INLINE symDiff #-}
 
-
+-- | /O(n + m)/ or /O(1)/. Find symmetric difference of the two sets:
+--   resulting set containts elements that either in first or second
+--   set, but not in both simultaneous.
+--
 symDiff :: IntSet -> IntSet -> IntSet
 symDiff t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
     | m1 `shorter` m2 = leftiest
