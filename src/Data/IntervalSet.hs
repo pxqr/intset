@@ -60,17 +60,17 @@ module Data.IntervalSet
 
          -- ** Inclusion
        , isSubsetOf, isSupersetOf
-       , isProperSubsetOf, isProperSupersetOf
+--       , isProperSubsetOf, isProperSupersetOf
 
          -- * Construction
        , empty
        , singleton
        , interval
-
+{-
        , naturals
        , negatives
        , universe
-
+-}
          -- * Modification
        , insert
        , delete

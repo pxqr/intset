@@ -1074,7 +1074,6 @@ partition f = unStrict . go
 --
 findMin :: IntSet -> Key
 findMin (Bin _ rootM l r)
--- TODO is it correct?
     | rootM < 0 = go r
     | otherwise = go l
   where
@@ -1140,7 +1139,6 @@ unstream = fromList
   "IntSet/map/id" Data.IntervalSet.Internal.map id = id
   #-}
 
--- TODO fusion
 -- | /O(n * min(W, n))/.
 --   Apply the function to each element of the set.
 --
@@ -1282,7 +1280,7 @@ binI :: Prefix -> Mask -> IntSet -> IntSet -> IntSet
 
 binI p m (Fin _  m1) (Fin _  m2)
   | m1 == m && m2 == m
--- TODO ?  | m1 == m2
+-- TODO can we simplify this?  | m1 == m2
   = Fin p (m * 2)
 
 binI p m l r = Bin p m l r
@@ -1300,7 +1298,7 @@ bin _ _ Nil r   = r
 bin _ _ l   Nil = l
 bin p m (Fin _  m1) (Fin _  m2)
   | m1 == m && m2 == m
--- TODO ?  | m1 == m2
+-- TODO can we simplify this?  | m1 == m2
   = Fin p (m * 2)
 bin p m l   r  = Bin p m l r
 {-# INLINE bin #-}
@@ -1467,9 +1465,10 @@ match :: Int -> Prefix -> Mask -> Bool
 match i p m = mask i m == p
 {-# INLINE match #-}
 
--- TODO optimize this
+{-
 matchFin :: Int -> Prefix -> Mask -> Bool
 matchFin i p m = match i p m && (m .&. i == m .&. p)
+-}
 
 nomatch :: Int -> Prefix -> Mask -> Bool
 nomatch i p m = mask i m /= p

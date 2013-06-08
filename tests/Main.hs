@@ -155,6 +155,7 @@ prop_min :: [Int] -> Bool
 prop_min [] = True
 prop_min xs = findMin (fromList xs) == L.minimum xs
 
+{-
 prop_universeMember :: [Int] -> Bool
 prop_universeMember = all (`member` universe)
 
@@ -178,6 +179,7 @@ prop_negatives = all check
   where
     check x |   x < 0   = member x negatives
             | otherwise = True
+-}
 
 prop_minInSet :: IntSet -> Bool
 prop_minInSet s
@@ -359,13 +361,14 @@ main = defaultMain
   , testProperty "symmetric difference size upper bound" prop_symDiffSizeBound
 
 
---  , testProperty "universe member"      prop_universeMember
---  , testProperty "universe delete"      prop_universeDelete
---  , testProperty "universe insert"      prop_universeInsert
---  , testProperty "universe nat neg"     prop_universeNatNeg
-
+{-
+  , testProperty "universe member"      prop_universeMember
+  , testProperty "universe delete"      prop_universeDelete
+  , testProperty "universe insert"      prop_universeInsert
+  , testProperty "universe nat neg"     prop_universeNatNeg
   , testProperty "naturals"             prop_naturals
   , testProperty "negatives"            prop_negatives
+-}
 
   , testProperty "size"                 prop_size
   , testProperty "sort"                 prop_sorted
