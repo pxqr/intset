@@ -152,7 +152,7 @@ toByteString snp =
         maxEl    = if S.null snp then 0 else findMax s + 1
         sizeWord = wordSize maxEl
         sizeByte = byteSize maxEl
-    in BS.take sizeByte $ do
+    in BS.take sizeByte $
        BS.unsafeCreate (sizeWord * sizeOf (undefined :: BitMap))
                        (`start` s) -- createAndTrim
   where
@@ -161,7 +161,7 @@ toByteString snp =
     byteSize x = (x `div` 8)  + if (x `mod` 8)  == 0 then 0 else 1
 
     indent :: Ptr Word8 -> Int -> Int -> IO ()
-    indent ptr n p = void $ BS.memset (ptr `plusPtr` (shiftR n 3)) 0
+    indent ptr n p = void $ BS.memset (ptr `plusPtr`  shiftR n 3) 0
                                       (fromIntegral  (shiftR (p - n) 3))
     {-# INLINE indent #-}
 

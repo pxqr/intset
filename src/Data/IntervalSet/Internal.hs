@@ -384,11 +384,11 @@ isSubsetOf t1@(Bin p1 m1 l1 r1) (Bin p2 m2 l2 r2)
       | zero p1 m2 = isSubsetOf t1 l2
       | otherwise  = isSubsetOf t1 r2
 
-isSubsetOf    (Bin _ _ _ _)      (Tip _  _ ) = False
+isSubsetOf     Bin {}             Tip {}    = False
 isSubsetOf    (Bin p1 m1 _ _)    (Fin p2 m2)
   = finMask m2 `shorterEq` m1 && match p1 p2 (finMask m2)
 
-isSubsetOf    (Bin _ _ _ _)     Nil         = False
+isSubsetOf     Bin {}           Nil         = False
 isSubsetOf t1@(Tip p1 _   )    (Bin p2 m2 l r)
   | nomatch p1 p2 m2 = False
   |    zero p1 m2    = isSubsetOf t1 l
@@ -398,18 +398,18 @@ isSubsetOf    (Tip p1 bm1)     (Tip p2 bm2)
   = p1 == p2 && isSubsetOfBM bm1 bm2
 
 isSubsetOf    (Tip p1 _  )     (Fin p2 m2 ) = match p1 p2 (finMask m2)
-isSubsetOf    (Tip _  _  )      Nil         = False
+isSubsetOf     Tip {}           Nil         = False
 isSubsetOf t1@(Fin p1 m1 )     (Bin p2 m2 l r)
   | finMask m1 `shorterEq` m2 = False
   |      nomatch p1 p2 m2     = False
   |         zero p1 m2        = isSubsetOf t1 l
   |         otherwise         = isSubsetOf t1 r
 
-isSubsetOf    (Fin _  _  )     (Tip _  _ )   = False
+isSubsetOf     Fin {}           Tip {}       = False
 isSubsetOf    (Fin p1 m1 )     (Fin p2 m2)
   = m2 `shorterEq` m1 && match p1 p2 (finMask m2)
 
-isSubsetOf    (Fin _  _  )      Nil          = False
+isSubsetOf     Fin {}           Nil          = False
 isSubsetOf     Nil              _            = True
 
 
@@ -557,7 +557,7 @@ splitFin p m
    | m == WORD_SIZE_IN_BITS = Tip p (Bits.complement 0)
    |       otherwise        = Bin p m' (Fin p m') (Fin (p + m') m')
   where
-    m' = intFromNat ((natFromInt m) `shiftR` 1) -- TODO endian independent
+    m' = intFromNat (natFromInt m `shiftR` 1) -- TODO endian independent
 {-# INLINE splitFin #-}
 
 complement :: IntSet -> IntSet
@@ -580,22 +580,22 @@ union :: IntSet -> IntSet -> IntSet
 union t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
     | shorter m1 m2 = leftiest
     | shorter m2 m1 = rightiest
-    | p1 == p2      = binI p1 m1 (union l1 l2) (union r1 r2)
+    | p1 == p2      = binI p1 m1 (l1 `union` l2) (r1 `union` r2)
     | otherwise     = join p1 t1 p2 t2
   where
     leftiest
       | nomatch p2 p1 m1 = join p1 t1 p2 t2
-      |     zero p2 m1   = binI p1 m1 (union l1 t2) r1
-      |      otherwise   = binI p1 m1 l1 (union r1 t2)
+      |     zero p2 m1   = binI p1 m1 (l1 `union` t2) r1
+      |      otherwise   = binI p1 m1 l1 (r1 `union` t2)
 
     rightiest
       | nomatch p1 p2 m2 = join p1 t1 p2 t2
-      |    zero p1 m2    = binI p2 m2 (union t1 l2) r2
-      |     otherwise    = binI p2 m2 l2 (union t1 r2)
+      |    zero p1 m2    = binI p2 m2 (t1 `union` l2) r2
+      |     otherwise    = binI p2 m2 l2 (t1 `union` r2)
 
-union t@(Bin _ _ _ _) (Tip p bm) = insertBM  p bm t
-union t@(Bin _ _ _ _) (Fin p m ) = insertFin p m  t
-union t@(Bin _ _ _ _)  Nil       = t
+union t@ Bin {}       (Tip p bm) = insertBM  p bm t
+union t@ Bin {}       (Fin p m ) = insertFin p m  t
+union t@ Bin {}        Nil       = t
 union   (Fin p m )     t         = insertFin p m t
 union   (Tip p bm)     t         = insertBM p bm t
 union    Nil           t         = t
@@ -639,10 +639,10 @@ properSubsetOf !p1 !m1 !p2 !m2 = (m2 `shorter` m1) && match p1 p2 (finMask m2)
 
 unionBM :: Prefix -> BitMap -> IntSet -> IntSet
 unionBM !p !bm !t = case tip p bm of
-  Bin _ _ _ _ -> error "unionBM: impossible"
-  Fin p' m'   -> insertFin p' m' t
-  Tip p' bm'  -> insertBM p' bm' t
-  Nil         -> t
+  Bin {}     -> error "unionBM: impossible"
+  Fin p' m'  -> insertFin p' m' t
+  Tip p' bm' -> insertBM p' bm' t
+  Nil        -> t
 
 {--------------------------------------------------------------------
   Intersection
@@ -669,9 +669,9 @@ intersection t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
       |     zero p1 m2   = intersection t1 l2
       |     otherwise    = intersection t1 r2
 
-intersection t@(Bin _ _ _ _)   (Tip p bm)    = intersectBM p bm t
-intersection t@(Bin _ _ _ _)   (Fin p m)     = intersectFin p m t
-intersection   (Bin _ _ _ _)    Nil          = Nil
+intersection t@ Bin {}         (Tip p bm)    = intersectBM p bm t
+intersection t@ Bin {}         (Fin p m)     = intersectFin p m t
+intersection    Bin {}          Nil          = Nil
 intersection   (Tip p bm)       t            = intersectBM p bm t
 intersection   (Fin p m)        t            = intersectFin p m t
 intersection    Nil             _            = Nil
@@ -754,7 +754,7 @@ difference t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
       |    zero p1 m2    = difference t1 l2
       |     otherwise    = difference t1 r2
 
-difference t1@(Bin _ _ _ _)      (Tip p bm)    = deleteBM p bm t1
+difference t1@ Bin {}            (Tip p bm)    = deleteBM p bm t1
 difference t1@(Bin p1 m1 _ _)    (Fin p2 m2)
     | m1 `shorter` finMask m2
     = if match p2 p1 m1
@@ -769,13 +769,13 @@ difference t1@(Bin p1 m1 _ _)    (Fin p2 m2)
     | p1 == p2  = Nil
     | otherwise = t1
 
-difference t1@(Bin _ _ _ _)     Nil            = t1
+difference t1@ Bin {}           Nil            = t1
 difference t1@(Tip p _ )       (Bin p2 m2 l r)
   | nomatch p p2 m2 = t1
   |   zero p m2     = difference t1 l
   |   otherwise     = difference t1 r
 
-difference t1@(Tip _ _)        (Tip p bm)      = deleteBM p bm t1
+difference t1@ Tip {}          (Tip p bm)      = deleteBM p bm t1
 difference t1@(Tip p1 _)       (Fin p2 m2 ) --
   | nomatch p1 p2 (finMask m2) = t1         --
   |          otherwise         = Nil        --
@@ -846,9 +846,9 @@ symDiff t1@(Bin p1 m1 l1 r1) t2@(Bin p2 m2 l2 r2)
       |    zero p1 m2    = bin  p2 m2 (symDiff l2 t1) r2 -- TODO tune (symDiff l1 t2)
       |    otherwise     = bin  p2 m2 l2 (symDiff r2 t1)
 
-symDiff t1@(Bin _  _   _ _)    (Tip p2 bm2    ) = symDiffTip p2 bm2 t1
-symDiff t1@(Bin _  _   _ _)    (Fin p2 m2     ) = symDiffFin p2 m2  t1
-symDiff t1@(Bin _  _   _ _)     Nil             = t1
+symDiff t1@ Bin {}             (Tip p2 bm2    ) = symDiffTip p2 bm2 t1
+symDiff t1@ Bin {}             (Fin p2 m2     ) = symDiffFin p2 m2  t1
+symDiff t1@ Bin {}              Nil             = t1
 symDiff    (Tip p1 bm1    ) t2                  = symDiffTip p1 bm1 t2
 symDiff    (Fin p1 m1     ) t2                  = symDiffFin p1 m1  t2
 symDiff     Nil             t2                  = t2
@@ -1366,7 +1366,7 @@ ppStats s = do
   let bssize    = bsSize s
   let savedSizeBS = bssize - treeSize * 8
   putStrLn $ "Saved space over dense set:  " ++ show (savedSize * 8)
-  putStrLn $ "Saved space over bytestring: " ++ show (savedSizeBS)
+  putStrLn $ "Saved space over bytestring: " ++ show  savedSizeBS
 
   let orig = origSize s
   let per   = (fromIntegral savedSize / fromIntegral orig) * (100 :: Double)

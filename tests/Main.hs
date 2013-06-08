@@ -10,7 +10,7 @@ import Data.List as L (sort, nub, map, filter, minimum, intersect)
 import Data.IntervalSet as S
 import Data.IntervalSet.ByteString as S
 import Data.Monoid
-import Debug.Trace
+
 
 
 instance Arbitrary IntSet where
@@ -38,12 +38,9 @@ prop_insertLookup :: IntSet -> Int -> Bool
 prop_insertLookup s i = member i (insert i s )
 
 prop_unionLookup :: [Int] -> [Int] -> Bool
-prop_unionLookup a b = and
-   [ all (`member` u) a
-   , all (`member` u) b
-   ]
+prop_unionLookup a b = all (`member` u) a && all (`member` u) b
   where
-    u = union (fromList a) (fromList b)
+    u = fromList a `union` fromList b
 
 prop_sorted :: IntSet -> Bool
 prop_sorted xs = toList xs == L.nub (L.sort (toList xs))
@@ -56,7 +53,7 @@ prop_unionSize a b = size u >= size a
                   && size u >= size b
                   && size u <= size a + size b
   where
-    u = union a b
+    u = a `union` b
 
 prop_unionComm :: IntSet -> IntSet -> Bool
 prop_unionComm a b = a <> b == b <> a
@@ -83,8 +80,8 @@ prop_intersectionSize a b = size i <= size a && size i <= size b
 
 prop_intersection :: [Int] -> [Int] -> Bool
 prop_intersection a b =
-  intersection (fromList a) (fromList b)
-  == fromList (L.intersect a b)
+  fromList a `intersection` fromList b
+  == fromList (a `L.intersect` b)
 
 prop_intersectComm :: IntSet -> IntSet -> Bool
 prop_intersectComm a b = (a `intersection` b) == (b `intersection` a)
@@ -212,7 +209,7 @@ prop_differenceSize a b = size (difference a b) <= size a
 
 
 prop_differenceSubset :: IntSet -> IntSet -> Bool
-prop_differenceSubset = undefined
+prop_differenceSubset a b = (a `difference` b) `isSubsetOf` a
 
 
 prop_differenceDeMorgan1 :: IntSet -> IntSet -> IntSet -> Bool
@@ -277,7 +274,7 @@ prop_bitmapEncode xs = fromByteString (toByteString xs') == xs'
 
 prop_partition :: IntSet -> Bool
 prop_partition s = fst (S.partition even s) == S.filter even s
-               &&  snd (S.partition even s) == S.filter (not . even) s
+               &&  snd (S.partition even s) == S.filter odd  s
 
 prop_subsetSize :: IntSet -> IntSet -> Bool
 prop_subsetSize a b
@@ -419,6 +416,7 @@ main = defaultMain
   , testProperty "difference de morgan1"     prop_differenceDeMorgan1
   , testProperty "difference de morgan2"     prop_differenceDeMorgan2
   , testProperty "difference distributive"   prop_differenceDistributive
+  , testProperty "difference subset"         prop_differenceSubset
 
   , testProperty "split pivot"               prop_splitPivot
   , testProperty "split intersection"        prop_splitIntersect
