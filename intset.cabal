@@ -18,6 +18,10 @@ description:
    suffixes compaction. In randomized settings this structure expected
    to be as fast as Data.IntSet from containers, but if a sets is
    likely to have long continuous intervals it should be much faster.
+   .
+   [/Release notes/]
+   .
+     * /0.1.0.0:/ Initial version.
 
 
 extra-source-files:    README.md
