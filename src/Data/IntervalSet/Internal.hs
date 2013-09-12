@@ -1499,7 +1499,7 @@ highestBitMask x1 =
       x7 = x6 .|. x6 `shiftR` 32
   in x7 `xor` (x7 `shiftR` 1)
 #else
-  in x6 `xor` (x6 `shiftRL` 1)
+  in x6 `xor` (x6 `shiftR` 1)
 #endif
 {-# INLINE highestBitMask #-}
 
