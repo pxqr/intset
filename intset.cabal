@@ -21,8 +21,8 @@ description:
 
 
 extra-source-files:    README.md
+                       changelog
                        .travis.yml
-
 
 source-repository head
   type:                git
