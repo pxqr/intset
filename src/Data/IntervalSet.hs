@@ -1,5 +1,5 @@
 -- |
---   Copyright   :  (c) Sam T. 2013
+--   Copyright   :  (c) Sam Truzjan 2013
 --   License     :  BSD3
 --   Maintainer  :  pxqr.sta@gmail.com
 --   Stability   :  experimental
@@ -32,8 +32,9 @@
 --     single interval).
 --
 --   Note that some operations will take centuries to compute. For
---   exsample @map id universe@ will never end as well as 'filter'
---   applied to 'universe', 'naturals', 'positives' or 'negatives'.
+--   example @map id universe@ will a long time to end as well as
+--   'filter' applied to 'universe', 'naturals', 'positives' or
+--   'negatives'.
 --
 --   Also note that some operations like 'union', 'intersection' and
 --   'difference' have overriden from default fixity, so use these

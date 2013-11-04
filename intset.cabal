@@ -3,9 +3,9 @@ version:               0.1.0.1
 category:              Data
 license:               BSD3
 license-file:          LICENSE
-author:                Sam T.
-maintainer:            Sam T. <pxqr.sta@gmail.com>
-copyright:             (c) 2013, Sam T.
+author:                Sam Truzjan
+maintainer:            Sam Truzjan <pxqr.sta@gmail.com>
+copyright:             (c) 2013, Sam Truzjan
 homepage:              https://github.com/pxqr/intset
 bug-reports:           https://github.com/pxqr/intset/issues
 build-type:            Simple
