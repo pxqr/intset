@@ -1,3 +1,4 @@
 * 0.1.0.0: Initial version.
 * 0.1.0.1: Fix build failure on 32 bit arch.
 * 0.1.0.2: Move release notes to changelog file.
+* 0.1.0.3: FIX: Add changelog to tarball.

@@ -1,5 +1,5 @@
 name:                  intset
-version:               0.1.0.2
+version:               0.1.0.3
 category:              Data
 license:               BSD3
 license-file:          LICENSE
@@ -32,7 +32,7 @@ source-repository this
   type:                git
   location:            git://github.com/pxqr/intset.git
   branch:              master
-  tag:                 v0.1.0.2
+  tag:                 v0.1.0.3
 
 
 flag testing
