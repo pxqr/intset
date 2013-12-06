@@ -125,7 +125,6 @@ import qualified Data.List as L
 import Data.Monoid
 import Data.Ord
 import Data.Word
-import Text.ParserCombinators.ReadP
 
 
 -- machine specific properties of basic types
@@ -251,18 +250,17 @@ isValid (Bin _  _ l r)
 --------------------------------------------------------------------}
 
 instance Show IntSet where
-  showsPrec _ s = showString "{" . list (toList s) . showString "}"
+  showsPrec _ s = showString "fromList [" . list (toList s) . showString "]"
     where
       list [] = showString ""
       list [x] = shows x
       list (x : xs) = shows x . showString "," . list xs
 
 instance Read IntSet where
-  readsPrec _ = readP_to_S $ do
-    "{" <- readS_to_P lex
-    xs  <- readS_to_P reads `sepBy` (skipSpaces >> char ',')
-    "}" <- readS_to_P lex
-    return (fromList xs)
+  readsPrec p = readParen (p > 10) $ \ r -> do
+    ("fromList",s) <- lex r
+    (xs,t) <- reads s
+    return (fromList xs,t)
 
 instance Ord IntSet where
   compare = comparing toList
