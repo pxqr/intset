@@ -22,6 +22,7 @@ import Data.Bits
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Internal as BS
+import Control.Monad as CM
 import Foreign
 
 import Data.IntervalSet.Internal as S
@@ -161,12 +162,12 @@ toByteString snp =
     byteSize x = (x `div` 8)  + if (x `mod` 8)  == 0 then 0 else 1
 
     indent :: Ptr Word8 -> Int -> Int -> IO ()
-    indent ptr n p = void $ BS.memset (ptr `plusPtr`  shiftR n 3) 0
+    indent ptr n p = CM.void $ BS.memset (ptr `plusPtr`  shiftR n 3) 0
                                       (fromIntegral  (shiftR (p - n) 3))
     {-# INLINE indent #-}
 
     start :: Ptr Word8 -> IntSet -> IO ()
-    start ptr s = void $ write s 0
+    start ptr s = CM.void $ write s 0
       where
         write :: IntSet -> Int -> IO Int
         write s' !n = case s' of
