@@ -1,0 +1,15 @@
+2013-10-04  Sam Truzjan  <pxqr.sta@gmail.com>
+
+	* 0.1.0.3: FIX: Add changelog to tarball.
+
+2013-10-04  Sam Truzjan  <pxqr.sta@gmail.com>
+
+	* 0.1.0.2: Move release notes to changelog file.
+
+2013-08-12  Sam Truzjan  <pxqr.sta@gmail.com>
+
+	* 0.1.0.1: Fix build failure on 32 bit arch.
+
+2013-06-08  Sam Truzjan  <pxqr.sta@gmail.com>
+
+	* 0.1.0.0: Initial version.

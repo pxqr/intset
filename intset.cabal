@@ -21,7 +21,7 @@ description:
 
 
 extra-source-files:    README.md
-                       changelog
+                       ChangeLog
                        .travis.yml
 
 source-repository head
